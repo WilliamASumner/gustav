@@ -29,6 +29,28 @@ from string import Template
 # Good libs
 import os,sys
 
+
+class CustomRequestHandler(http.server.SimpleHTTPRequestHandler):
+    #def do_GET(self):
+        #Response to page fetch happens here
+
+    def parse_JSON(data):
+        return json.loads(data_string)
+
+    def do_POST(self):
+        # Response to Website AJAX happens here
+        length = int(self.headers['Content-Length'])
+        data_string = self.rfile.read(length).decode('UTF-8')
+        try:
+            data = parse_JSON(data)
+            result = data['dummy_val']
+        except:
+            result = 'Error parsing data'
+
+        response_str = json.dumps({"result":result})
+        self.send_response(200)
+        self.wfile.write(bytes(response_str,'UTF-8'))
+
 class Interface():
     def __init__(self,alternatives=2, prompt="Choose an alternative"):
         self.title_l_str = "Gustav n-AFC!"
@@ -47,14 +69,28 @@ class Interface():
 
         self.keypress_wait = .005 # Sleep time in sec during keypress loop to avoid cpu race
                                   # Longer values are better for slower machines
-
+        self.port = 8000
+        while True:
+            try:
+                self.server = socketserver.TCPServer(("",self.port),CustomRequestHandler)
+                break
+            except OSError:
+                self.port += 1
 
     def destroy(self):
+        self.server.server_close()
+        #TODO find a way to close the browser
         return
 
-    
     def generate_page():
         return "<!DOCTYPE html>\n<html><body><p>Hello World</p></body></html>"
+
+    def start_server_thread():
+        try:
+            self.server.serve_forever()
+        except e:
+            print(e)
+
 
     def redraw(self):
         """Draw entire window
