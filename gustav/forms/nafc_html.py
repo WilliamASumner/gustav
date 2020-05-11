@@ -77,10 +77,14 @@ class Interface():
             except OSError:
                 self.port += 1
 
+        self.browser = webbrowser.get() # get befault browser
+        self.browser.open("http://localhost:" + str(self.port))
+
     def destroy(self):
         self.server.server_close()
-        #TODO find a way to close the browser
-        return
+
+        #close_url = Template("localhost:$port/close.html").substitute({"port":self.port})
+        #self.browser.open(close_url,new=0)
 
     def generate_page():
         return "<!DOCTYPE html>\n<html><body><p>Hello World</p></body></html>"
