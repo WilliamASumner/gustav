@@ -31,27 +31,58 @@ import os,sys
 
 
 class CustomRequestHandler(http.server.SimpleHTTPRequestHandler):
-    #def do_GET(self):
-        #Response to page fetch happens here
+    # Adapted from https://gist.github.com/bradmontgomery/2219997
+    Interface = None
 
-    def parse_JSON(data):
+    def connect_interface(self,InterfaceInstance):
+        self.Interface = InterfaceInstance
+
+    def set_html_headers(self):
+        self.send_response(200)
+        self.send_header("Content-type","text/html")
+        self.end_headers()
+
+    def set_ajax_headers(self):
+        self.send_response(200)
+        self.send_header("Content-type","application/json")
+        self.end_headers()
+
+    def parse_json(data):
         return json.loads(data_string)
+
+    def do_GET(self):
+        #Response to page fetch happens here
+        print("Receieved GET")
+        self.set_html_headers()
+        self.wfile.write(self.Interface.generate_page())
 
     def do_POST(self):
         # Response to Website AJAX happens here
         length = int(self.headers['Content-Length'])
         data_string = self.rfile.read(length).decode('UTF-8')
         try:
-            data = parse_JSON(data)
+            data = parse_json(data)
             result = data['dummy_val']
         except:
             result = 'Error parsing data'
 
         response_str = json.dumps({"result":result})
-        self.send_response(200)
         self.wfile.write(bytes(response_str,'UTF-8'))
 
+class CustomTCPServer(socketserver.TCPServer):
+    def __init__(self,server_address,RequestHandler,InterfaceInstance):
+        RequestHandler.Interface = InterfaceInstance
+        super(CustomTCPServer,self).__init__(server_address,RequestHandler)
+
 class Interface():
+    def start_server_thread(self):
+        print("Serving on port",self.port)
+        try:
+            self.server.serve_forever()
+        except:
+            print("Unexpected error on server:", sys.exc_info()[0])
+            sys.exit(1) # Don't continue on an error
+
     def __init__(self,alternatives=2, prompt="Choose an alternative"):
         self.title_l_str = "Gustav n-AFC!"
         self.title_c_str = ""
@@ -72,13 +103,14 @@ class Interface():
         self.port = 8000
         while True:
             try:
-                self.server = socketserver.TCPServer(("",self.port),CustomRequestHandler)
+                self.server = CustomTCPServer(("",self.port),CustomRequestHandler,self)
                 break
             except OSError:
                 self.port += 1
 
         self.browser = webbrowser.get() # get befault browser
         self.browser.open("http://localhost:" + str(self.port))
+        self.start_server_thread()
 
     def destroy(self):
         self.server.server_close()
@@ -86,15 +118,8 @@ class Interface():
         #close_url = Template("localhost:$port/close.html").substitute({"port":self.port})
         #self.browser.open(close_url,new=0)
 
-    def generate_page():
-        return "<!DOCTYPE html>\n<html><body><p>Hello World</p></body></html>"
-
-    def start_server_thread():
-        try:
-            self.server.serve_forever()
-        except e:
-            print(e)
-
+    def generate_page(self):
+        return bytes("<!DOCTYPE html>\n<html><body><p>Hello World</p></body></html>",'UTF-8')
 
     def redraw(self):
         """Draw entire window
