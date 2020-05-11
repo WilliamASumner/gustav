@@ -30,12 +30,27 @@ from string import Template
 import os,sys
 
 
+
+# Adapted from https://gist.github.com/bradmontgomery/2219997
 class CustomRequestHandler(http.server.SimpleHTTPRequestHandler):
-    # Adapted from https://gist.github.com/bradmontgomery/2219997
     Interface = None
+
+    if (os.name=='nt'): # Windows
+        nullFile = 'C:\\nul'
+    elif (os.name == 'posix'): # Linux
+        nullFile = '/dev/null'
 
     def connect_interface(self,InterfaceInstance):
         self.Interface = InterfaceInstance
+
+    # https://stackoverflow.com/questions/25360798/save-logs-simplehttpserver
+    # Output is not needed from Server
+    def log_message(self, format, *args):
+        log_file = open(self.nullFile, 'a', 1) # output not needed
+        log_file.write("%s - - [%s] %s\n" %
+                            (self.client_address[0],
+                             self.log_date_time_string(),
+                             format%args))
 
     def set_html_headers(self):
         self.send_response(200)
@@ -71,7 +86,7 @@ class CustomRequestHandler(http.server.SimpleHTTPRequestHandler):
 
 class CustomTCPServer(socketserver.TCPServer):
     def __init__(self,server_address,RequestHandler,InterfaceInstance):
-        RequestHandler.Interface = InterfaceInstance
+        RequestHandler.Interface = InterfaceInstance # TODO clean this up
         super(CustomTCPServer,self).__init__(server_address,RequestHandler)
 
 class Interface():
@@ -108,9 +123,10 @@ class Interface():
             except OSError:
                 self.port += 1
 
+        #TODO clean this up
         self.browser = webbrowser.get() # get befault browser
         self.browser.open("http://localhost:" + str(self.port))
-        self.start_server_thread()
+        self.server_thread = threading.Thread(target=self.start_server_thread(),daemon=True) # start server in background
 
     def destroy(self):
         self.server.server_close()
