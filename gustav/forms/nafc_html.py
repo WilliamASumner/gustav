@@ -21,8 +21,6 @@
 #
 
 import os,sys
-
-#Todo check for Python 2 compatibility of these libraries
 import webbrowser
 import threading
 from string import Template
@@ -31,13 +29,9 @@ import re
 if sys.version_info[0] == 2:
     import SocketServer as sserver
     import SimpleHTTPServer as server_lib
-    def conv_bytes(string,encoding):
-        return bytearray(string,encoding)
 else:
     import socketserver as sserver
     import http.server as server_lib
-    def conv_bytes(string,encoding):
-        return bytearray(string,encoding)
 
 
 # Adapted from https://gist.github.com/bradmontgomery/2219997
@@ -98,7 +92,7 @@ class CustomRequestHandler(server_lib.SimpleHTTPRequestHandler):
             result = 'Error parsing data'
 
         response_str = json.dumps({"result":result})
-        self.wfile.write(conv_bytes(response_str,'UTF-8'))
+        self.wfile.write(bytearray(response_str,'UTF-8'))
 
 class CustomTCPServer(sserver.TCPServer,object):
     def __init__(self,server_address,RequestHandler,InterfaceInstance):
@@ -179,7 +173,7 @@ class Interface():
         body = Template('<body>\n$content<script src="js/main.js"></script>\n</body>').substitute({"content":center_content})
         head = '<head><meta charset="utf-8"><title>NAFC</title><link rel="stylesheet" href="css/styles.css"></head>'
         doc = Template("<!DOCTYPE html>\n<html>$head$body</html>").substitute({"head":head,"body":body})
-        return conv_bytes(doc,'UTF-8')
+        return bytearray(doc,'UTF-8')
 
     def generate_css(self):
         css = """
@@ -210,11 +204,11 @@ class Interface():
         }
         // TODO add specific button styles
         """
-        return conv_bytes(css,'UTF-8')
+        return bytearray(css,'UTF-8')
     def generate_js(self):
         js = """
         """
-        return conv_bytes(js,'UTF-8')
+        return bytearray(js,'UTF-8')
 
     def redraw(self):
         """Draw entire window
