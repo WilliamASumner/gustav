@@ -25,6 +25,7 @@ import threading
 import http.server
 import socketserver
 from string import Template
+import re
 
 # Good libs
 import os,sys
@@ -52,9 +53,9 @@ class CustomRequestHandler(http.server.SimpleHTTPRequestHandler):
                              self.log_date_time_string(),
                              format%args))
 
-    def set_html_headers(self):
+    def set_response_headers(self,kind):
         self.send_response(200)
-        self.send_header("Content-type","text/html")
+        self.send_header("Content-type",kind)
         self.end_headers()
 
     def set_ajax_headers(self):
@@ -66,10 +67,17 @@ class CustomRequestHandler(http.server.SimpleHTTPRequestHandler):
         return json.loads(data_string)
 
     def do_GET(self):
-        #Response to page fetch happens here
-        print("Receieved GET")
-        self.set_html_headers()
-        self.wfile.write(self.Interface.generate_page())
+        #Response to resource request
+
+        if re.match("^/$",self.path) or re.match("/index.html",self.path):
+            self.set_response_headers("text/html")
+            self.wfile.write(self.Interface.generate_html())
+        elif re.match(".*css",self.path):
+            self.set_response_headers("text/css")
+            self.wfile.write(self.Interface.generate_css())
+        elif re.match(".*js",self.path):
+            self.set_response_headers("application/javascript")
+            self.wfile.write(self.Interface.generate_js())
 
     def do_POST(self):
         # Response to Website AJAX happens here
@@ -115,6 +123,19 @@ class Interface():
 
         self.keypress_wait = .005 # Sleep time in sec during keypress loop to avoid cpu race
                                   # Longer values are better for slower machines
+        
+        if isinstance(alternatives, list):
+            self.alternatives = alternatives 
+        else:
+            self.alternatives = []
+            for i in range(alternatives):
+                self.alternatives.append(str(i+1)) # Text of alternatives
+        self.button_colors = []
+        self.button_borders = []
+        for i in range(len(self.alternatives)):
+            self.button_colors.append(0)
+            self.button_borders.append(1)
+
         self.port = 8000
         while True:
             try:
@@ -128,14 +149,64 @@ class Interface():
         self.browser.open("http://localhost:" + str(self.port))
         self.server_thread = threading.Thread(target=self.start_server_thread(),daemon=True) # start server in background
 
+
     def destroy(self):
         self.server.server_close()
 
         #close_url = Template("localhost:$port/close.html").substitute({"port":self.port})
         #self.browser.open(close_url,new=0)
 
-    def generate_page(self):
-        return bytes("<!DOCTYPE html>\n<html><body><p>Hello World</p></body></html>",'UTF-8')
+
+    def generate_html(self): #TODO clean this up. this is pretty horrible
+        button_base_str = '<input class="button" id="$id" type="button" value="$id" onClick="response(this.id)"/>\n$insert'
+        button_base_tmp = Template(button_base_str)
+        nafc_content = Template("$insert")
+        for id_val in self.alternatives:
+            nafc_content = Template(nafc_content.safe_substitute({"insert":button_base_str}))
+            nafc_content = Template(nafc_content.safe_substitute({"id":id_val}))
+        nafc_content = nafc_content.safe_substitute({"insert":""})
+
+        center_content = Template('<div class="center-container"><div class="center-element">$content</div></div>').substitute({"content":nafc_content})
+
+        body = Template('<body>\n$content<script src="js/main.js"></script>\n</body>').substitute({"content":center_content})
+        head = '<head><meta charset="utf-8"><title>NAFC</title><link rel="stylesheet" href="css/styles.css"></head>'
+        doc = Template("<!DOCTYPE html>\n<html>$head$body</html>").substitute({"head":head,"body":body})
+        return bytes(doc,'UTF-8')
+
+    def generate_css(self):
+        css = """
+        .center-container {
+            text-align;
+        }
+        .center-element {
+            display: inline-block;
+        }
+        .button {
+            margin: 15px;
+            border: 1px outset blue;
+            background-color: lightBlue;
+            height: 60px;
+            width: 60px;
+            cursor:pointer;
+            padding: 20 20 px;
+            outline-width: 2px;
+            outline-style: solid;
+            outline-color: green;
+            outline-offset: 6px;
+            border-radius: 5px;
+        }
+
+        .button:hover {
+            background-color: blue;
+            color: white;
+        }
+        // TODO add specific button styles
+        """
+        return bytes(css,'UTF-8')
+    def generate_js(self):
+        js = """
+        """
+        return bytes(js,'UTF-8')
 
     def redraw(self):
         """Draw entire window
@@ -543,7 +614,7 @@ if __name__ == "__main__":
     # Initialize interface
     # Alternatives can be a number, in which case labels will be "1", "2" etc., or
     # a list where len = # of alternatives, and each item is a single unique char
-    alternatives = ['A', 'B']
+    alternatives = ['A', 'B','C','D','E']
     interface = Interface(alternatives=alternatives)
     # Add some text
     interface.show_Prompt(False)
