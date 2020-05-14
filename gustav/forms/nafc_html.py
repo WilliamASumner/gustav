@@ -25,6 +25,7 @@ import webbrowser
 import threading
 from string import Template
 import re
+import json
 
 if sys.version_info[0] == 2:
     import SocketServer as sserver
@@ -65,7 +66,7 @@ class CustomRequestHandler(server_lib.SimpleHTTPRequestHandler):
         self.send_header("Content-type","application/json")
         self.end_headers()
 
-    def parse_json(data):
+    def parse_json(self,data_string):
         return json.loads(data_string)
 
     def do_GET(self):
@@ -84,12 +85,16 @@ class CustomRequestHandler(server_lib.SimpleHTTPRequestHandler):
         # Response to Website AJAX happens here
         length = int(self.headers['Content-Length'])
         data_string = self.rfile.read(length).decode('UTF-8')
+        data = "Error"
         try:
-            data = parse_json(data)
-            result = data['dummy_val']
-        except:
+            data = self.parse_json(data_string)
+            result = "Key pressed was " + str(data['key'])
+        except KeyError:
+            result = "Missing key: 'key'"
+        except Exception as e:
+            print(e)
             result = 'Error parsing data'
-
+        print("Recieved input: " + str(data))
         response_str = json.dumps({"result":result})
         self.wfile.write(bytearray(response_str,'UTF-8'))
 
@@ -164,9 +169,9 @@ class Interface():
         for id_val in self.alternatives:
             nafc_content = Template(nafc_content.safe_substitute({"insert":button_base_str}))
             nafc_content = Template(nafc_content.safe_substitute({"id":id_val}))
-        nafc_content = nafc_content.safe_substitute({"insert":""})
+        nafc_content = nafc_content.safe_substitute({"insert":'<div class="center"><p class="log" id="logid"></p></div>'})
 
-        center_content = Template('<div class="container"><div class="center">$content</div></div>').substitute({"content":nafc_content})
+        center_content = Template('<div class="container"><div class="true-center">$content</div></div>').substitute({"content":nafc_content})
 
         body = Template('<body>\n$content<script src="js/main.js"></script>\n</body>').substitute({"content":center_content})
         head = '<head>\n<meta charset="utf-8">\n<title>NAFC</title>\n<link rel="stylesheet" href="css/styles.css">\n</head>'
@@ -180,6 +185,12 @@ class Interface():
             width: 100%;
         }
         .center {
+            text-align: center;
+        }
+        .log {
+        /* placeholder */
+        }
+        .true-center {
             position: absolute;
             top: 50%;
             left: 50%;
@@ -237,6 +248,65 @@ class Interface():
             fade(el,0.1);
         }
 
+        function server_post(url, data, callback_func) {
+            var request = false;
+            try {
+                // Firefox, Opera 8.0+, Safari
+                request = new XMLHttpRequest();
+            }
+            catch (e) {
+                // Internet Explorer
+                try {
+                    request = new ActiveXObject("Msxml2.XMLHTTP");
+                }
+                catch (e) {
+                    try {
+                        request = new ActiveXObject("Microsoft.XMLHTTP");
+                    }
+                    catch (e) {
+                        alert("Your browser does not support AJAX!");
+                        return false;
+                    }
+                }
+            }
+            request.open("POST", url, true);
+            request.onreadystatechange = function() {
+                if (request.readyState == 4) {
+                    callback_func(request);
+                }
+            }
+            request.send(data);
+        }
+
+        function send_input(keyCode) {
+            //TODO this will have to become a polling function
+            console.log("send_input called");
+            var data = {'key':keyCode};
+            console.log("sending data:" + JSON.stringify(data));
+            server_post("index.html", JSON.stringify(data), parse_response)
+        }
+
+        function parse_response(request) {
+            var elem = document.getElementById('logid');
+            if (!elem) {
+                console.log("Page log not found");
+                return;
+            }
+            if (request !== false) {
+                try {
+                    elem.innerHTML =  JSON.parse(request.responseText)['result'];
+                } catch (e) {
+                    elem.innerHTML = "PARSE ERROR";
+                }
+            } else {
+                console.log("Error fetching response");
+            }
+        }
+
+        // key handler for page
+        document.onkeyup = function(event) {
+            send_input(event.keyCode);
+        }
         """
         return bytearray(js,'UTF-8')
 
