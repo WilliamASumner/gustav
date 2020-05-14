@@ -88,7 +88,7 @@ class CustomRequestHandler(server_lib.SimpleHTTPRequestHandler):
         data = "Error"
         try:
             data = self.parse_json(data_string)
-            result = "Key pressed was " + str(data['key'])
+            result = "Key pressed was " + str(data['key']) + ": " + chr(data['key'])
         except KeyError:
             result = "Missing key: 'key'"
         except Exception as e:
@@ -171,11 +171,23 @@ class Interface():
             nafc_content = Template(nafc_content.safe_substitute({"id":id_val}))
         nafc_content = nafc_content.safe_substitute({"insert":'<div class="center"><p class="log" id="logid"></p></div>'})
 
-        center_content = Template('<div class="container"><div class="true-center">$content</div></div>').substitute({"content":nafc_content})
+        buttons_centered = Template('<div class="container"><div class="true-center">$content</div></div>').substitute({"content":nafc_content})
 
-        body = Template('<body>\n$content<script src="js/main.js"></script>\n</body>').substitute({"content":center_content})
-        head = '<head>\n<meta charset="utf-8">\n<title>NAFC</title>\n<link rel="stylesheet" href="css/styles.css">\n</head>'
-        doc = Template('<!DOCTYPE html>\n<html lang="en">$head$body</html>').substitute({"head":head,"body":body})
+        base_html = """
+        <!DOCTYPE html>
+        <html lang="en">
+        <head>
+            <meta charset="utf-8">
+            <title>NAFC</title>
+            <link rel="stylesheet" href="css/styles.css">
+        </head>
+        <body>
+            $buttons
+            <script src="js/main.js"></script>
+        </body>
+        </html>"""
+
+        doc = Template(base_html).substitute({"buttons":buttons_centered})
         return bytearray(doc,'UTF-8')
 
     def generate_css(self):
