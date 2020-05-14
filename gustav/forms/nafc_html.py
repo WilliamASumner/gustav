@@ -70,7 +70,6 @@ class CustomRequestHandler(server_lib.SimpleHTTPRequestHandler):
 
     def do_GET(self):
         #Response to resource request
-
         if re.match("^/$",self.path) or re.match("/index.html",self.path):
             self.set_response_headers("text/html")
             self.wfile.write(self.Interface.generate_html())
@@ -154,7 +153,6 @@ class Interface():
 
     def destroy(self):
         self.server.server_close()
-
         #close_url = Template("localhost:$port/close.html").substitute({"port":self.port})
         #self.browser.open(close_url,new=0)
 
@@ -168,27 +166,32 @@ class Interface():
             nafc_content = Template(nafc_content.safe_substitute({"id":id_val}))
         nafc_content = nafc_content.safe_substitute({"insert":""})
 
-        center_content = Template('<div class="center-container"><div class="center-element">$content</div></div>').substitute({"content":nafc_content})
+        center_content = Template('<div class="container"><div class="center">$content</div></div>').substitute({"content":nafc_content})
 
         body = Template('<body>\n$content<script src="js/main.js"></script>\n</body>').substitute({"content":center_content})
-        head = '<head><meta charset="utf-8"><title>NAFC</title><link rel="stylesheet" href="css/styles.css"></head>'
-        doc = Template("<!DOCTYPE html>\n<html>$head$body</html>").substitute({"head":head,"body":body})
+        head = '<head>\n<meta charset="utf-8">\n<title>NAFC</title>\n<link rel="stylesheet" href="css/styles.css">\n</head>'
+        doc = Template('<!DOCTYPE html>\n<html lang="en">$head$body</html>').substitute({"head":head,"body":body})
         return bytearray(doc,'UTF-8')
 
     def generate_css(self):
         css = """
-        .center-container {
-            text-align;
+        .container {
+            display: block;
+            width: 100%;
         }
-        .center-element {
-            display: inline-block;
+        .center {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            -ms-transform: translate(-50%, -50%);
+            transform: translate(-50%, -50%);
         }
         .button {
             margin: 15px;
             border: 1px outset blue;
             background-color: lightBlue;
-            height: 60px;
-            width: 60px;
+            height: 150px;
+            width: 200px;
             cursor:pointer;
             padding: 20 20 px;
             outline-width: 2px;
@@ -202,11 +205,38 @@ class Interface():
             background-color: blue;
             color: white;
         }
-        // TODO add specific button styles
         """
         return bytearray(css,'UTF-8')
     def generate_js(self):
         js = """
+        function fade(el,increment) {
+            var opac = parseFloat(el.style.opacity);
+            if (increment > 0) {
+                if (val += increment <= 1) {
+                    el.style.opacity = val;
+                    requestAnimationFrame(fade);
+                }
+            } else {
+                if (val += increment < 0) {
+                    el.style.display = "none";
+                } else {
+                    requestAnimationFrame(fade);
+                }
+            }
+        }
+
+            
+        function fadeOut(el) {
+            el.style.opacity = 1;
+            fade(el,-0.1);
+        }
+
+        function fadeIn(el,display) {
+            el.style.opacity = 0;
+            el.style.display = "block" || display;
+            fade(el,0.1);
+        }
+
         """
         return bytearray(js,'UTF-8')
 
@@ -616,7 +646,7 @@ if __name__ == "__main__":
     # Initialize interface
     # Alternatives can be a number, in which case labels will be "1", "2" etc., or
     # a list where len = # of alternatives, and each item is a single unique char
-    alternatives = ['A', 'B','C','D','E']
+    alternatives = ['A', 'B','C']
     interface = Interface(alternatives=alternatives)
     # Add some text
     interface.show_Prompt(False)
