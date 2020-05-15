@@ -111,6 +111,7 @@ class Interface():
             self.server.serve_forever()
         except:
             print("Unexpected error on server:", sys.exc_info()[0])
+            self.server.server_close()
             sys.exit(1) # Don't continue on an error
 
     def __init__(self,alternatives=2, prompt="Choose an alternative"):
