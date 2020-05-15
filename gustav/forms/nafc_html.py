@@ -21,6 +21,7 @@
 #
 
 import os,sys
+import ctypes
 import webbrowser
 import threading
 from string import Template
@@ -149,6 +150,9 @@ class Interface():
                 break
             except OSError:
                 self.port += 1
+            except Exception as e:
+                print(e)
+                sys.exit(1)
 
         #TODO clean this up
         self.browser = webbrowser.get() # get befault browser
@@ -664,16 +668,22 @@ class Interface():
                 ('tv_nsec', ctypes.c_long)
             ]
 
-        #Configure Python access to the clock_gettime C library, via ctypes:
-        #Documentation:
-        #-ctypes.CDLL: https://docs.python.org/3.2/library/ctypes.html
-        #-librt.so.1 with clock_gettime: https://docs.oracle.com/cd/E36784_01/html/E36873/librt-3lib.html #-
-        #-Linux clock_gettime(): http://linux.die.net/man/3/clock_gettime
-        librt = ctypes.CDLL('librt.so.1', use_errno=True)
-        clock_gettime = librt.clock_gettime
-        #specify input arguments and types to the C clock_gettime() function
-        # (int clock_ID, timespec* t)
-        clock_gettime.argtypes = [ctypes.c_int, ctypes.POINTER(timespec)]
+        if sys.platform.lower() != 'darwin': # if not Linux
+            #Configure Python access to the clock_gettime C library, via ctypes:
+            #Documentation:
+            #-ctypes.CDLL: https://docs.python.org/3.2/library/ctypes.html
+            #-librt.so.1 with clock_gettime: https://docs.oracle.com/cd/E36784_01/html/E36873/librt-3lib.html #-
+            #-Linux clock_gettime(): http://linux.die.net/man/3/clock_gettime
+            librt = ctypes.CDLL('librt.so.1', use_errno=True)
+            clock_gettime = librt.clock_gettime
+            #specify input arguments and types to the C clock_gettime() function
+            # (int clock_ID, timespec* t)
+            clock_gettime.argtypes = [ctypes.c_int, ctypes.POINTER(timespec)]
+        else:
+            libsysb = ctypes.CDLL('/usr/lib/libSystem.B.dylib',use_errno=True) # Does not work on Sierra or earlier
+            clock_gettime = libsysb.clock_gettime
+            clock_gettime.argtypes = [ctypes.c_int,ctypes.POINTER(timespec)]
+
 
         def timestamp_s(self):
             "return a high-precision timestamp in seconds (sec)"
