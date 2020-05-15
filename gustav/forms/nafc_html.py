@@ -88,7 +88,10 @@ class CustomRequestHandler(server_lib.SimpleHTTPRequestHandler):
         data = "Error"
         try:
             data = self.parse_json(data_string)
-            result = "Key pressed was " + str(data['key']) + ": " + chr(data['key'])
+            key = chr(data['key'])
+            if int(data['key']) in range(37,41):
+                key = ['Left Arrow','Up Arrow', 'Right Arrow', 'Down Arrow'][data['key']-37]
+            result = "Key pressed was " + str(data['key']) + ": " + key
         except KeyError:
             result = "Missing key: 'key'"
         except Exception as e:
@@ -163,7 +166,7 @@ class Interface():
 
 
     def generate_html(self): #TODO clean this up. this is pretty horrible
-        button_base_str = '<input class="button" id="$id" type="button" value="$id" onClick="response(this.id)"/>\n$insert'
+        button_base_str = '<input class="button" id="$id" type="button" value="$id" onClick="buttonClick(this)"/>\n$insert'
         button_base_tmp = Template(button_base_str)
         nafc_content = Template("$insert")
         for id_val in self.alternatives:
@@ -172,6 +175,7 @@ class Interface():
         nafc_content = nafc_content.safe_substitute({"insert":'<div class="center"><p class="log" id="logid"></p></div>'})
 
         buttons_centered = Template('<div class="container"><div class="true-center">$content</div></div>').substitute({"content":nafc_content})
+        notifies = '<div class="notify center notifyright"><span class="vcenter">Sample Text</span></div>\n<div class="notify center notifyleft"><span class="vcenter">Sample Text</span></div>'
 
         base_html = """
         <!DOCTYPE html>
@@ -182,12 +186,13 @@ class Interface():
             <link rel="stylesheet" href="css/styles.css">
         </head>
         <body>
+            $notifies
             $buttons
             <script src="js/main.js"></script>
         </body>
         </html>"""
 
-        doc = Template(base_html).substitute({"buttons":buttons_centered})
+        doc = Template(base_html).substitute({"notifies": notifies, "buttons":buttons_centered})
         return bytearray(doc,'UTF-8')
 
     def generate_css(self):
@@ -198,6 +203,7 @@ class Interface():
         }
         .center {
             text-align: center;
+            vertical-align: center;
         }
         .log {
         /* placeholder */
@@ -223,6 +229,29 @@ class Interface():
             outline-offset: 6px;
             border-radius: 5px;
         }
+        .notify {
+            margin: 15px;
+            border: 1px outset blue;
+            height: 10em; /* 10 lines */
+            line-height: 10em;
+            width: 20%;
+            padding: 20 20 px;
+        }
+        .notifyright {
+            background-color: green;
+            color: white;
+            float: right;
+        }
+        .notifyleft {
+            background-color: red;
+            color: white;
+            float: left;
+        }
+        .vcenter {
+            display:inline-block;
+            vertical-align:middle;
+            line-height:normal;
+        }
 
         .button:hover {
             background-color: blue;
@@ -232,6 +261,11 @@ class Interface():
         return bytearray(css,'UTF-8')
     def generate_js(self):
         js = """
+        function buttonClick(button) {
+            console.log("Button " + button.id + " clicked");
+            send_input(button.id.charCodeAt(0)); // send ASCII code of id
+        }
+
         function fade(el,increment) {
             var opac = parseFloat(el.style.opacity);
             if (increment > 0) {
@@ -248,7 +282,6 @@ class Interface():
             }
         }
 
-            
         function fadeOut(el) {
             el.style.opacity = 1;
             fade(el,-0.1);
@@ -292,9 +325,7 @@ class Interface():
 
         function send_input(keyCode) {
             //TODO this will have to become a polling function
-            console.log("send_input called");
             var data = {'key':keyCode};
-            console.log("sending data:" + JSON.stringify(data));
             server_post("index.html", JSON.stringify(data), parse_response)
         }
 
@@ -311,6 +342,7 @@ class Interface():
                     elem.innerHTML = "PARSE ERROR";
                 }
             } else {
+                elem.innerHTML = "No server connection";
                 console.log("Error fetching response");
             }
         }
