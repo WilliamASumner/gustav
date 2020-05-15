@@ -152,7 +152,7 @@ class Interface():
             try:
                 self.server = CustomTCPServer(("",self.port),CustomRequestHandler,self)
                 break
-            except OSError:
+            except (OSError,sserver.socket.error):
                 self.port += 1
             except Exception as e:
                 print(e)
