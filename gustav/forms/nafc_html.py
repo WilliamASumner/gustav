@@ -204,7 +204,6 @@ class Interface():
         self.server.server_close()
         self.cmd_queue.push(Command.quit())
 
-
     def generate_html(self): #TODO clean this up. this is pretty horrible
         button_base_str = '<input class="button" id="$id" type="button" value="$id" onClick="buttonClick(this)"/>\n$insert'
         button_base_tmp = Template(button_base_str)
@@ -304,6 +303,49 @@ class Interface():
         function buttonClick(button) {
             console.log("Button " + button.id + " clicked");
             send_input(button.id.charCodeAt(0)); // send ASCII code of id
+            flashButton(button);
+        }
+
+        function fadeIn(el,duration,callback) {
+            var opacity = 0.0;
+            var increment = 20.0/duration;
+            var timer = setInterval(function() {
+                if (opacity > 1) {
+                    clearInterval(timer);
+                    if(callback) {
+                        callback();
+                    }
+                }
+                el.style.opacity = opacity;
+                opacity += increment;
+            }, 20);
+        }
+
+        function fadeOut(el,duration,callback) {
+            var opacity = 1.0;
+            var increment = 20.0/duration;
+            var timer = setInterval(function() {
+                if (opacity < 0) {
+                    clearInterval(timer);
+                    if(callback) {
+                        callback();
+                    }
+                }
+                el.style.opacity = opacity;
+                opacity -= increment;
+            }, 20);
+        }
+
+        function flashButton(button) {
+            if (!button.style) {
+                button.style = window.getComputedStyle(button);
+            }
+            var flashDuration = 250;
+            fadeOut(button,flashDuration/3,function() {
+                setTimeout(function() {
+                    fadeIn(button,flashDuration/3,null);
+                },flashDuration/3);
+            });
         }
 
         function server_post(url, data, callback_func) {
