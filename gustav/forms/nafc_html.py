@@ -271,33 +271,6 @@ class Interface():
             send_input(button.id.charCodeAt(0)); // send ASCII code of id
         }
 
-        function fade(el,increment) {
-            var opac = parseFloat(el.style.opacity);
-            if (increment > 0) {
-                if (val += increment <= 1) {
-                    el.style.opacity = val;
-                    requestAnimationFrame(fade);
-                }
-            } else {
-                if (val += increment < 0) {
-                    el.style.display = "none";
-                } else {
-                    requestAnimationFrame(fade);
-                }
-            }
-        }
-
-        function fadeOut(el) {
-            el.style.opacity = 1;
-            fade(el,-0.1);
-        }
-
-        function fadeIn(el,display) {
-            el.style.opacity = 0;
-            el.style.display = "block" || display;
-            fade(el,0.1);
-        }
-
         function server_post(url, data, callback_func) {
             var request = false;
             try {
