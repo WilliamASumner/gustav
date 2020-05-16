@@ -348,8 +348,8 @@ class Interface():
         js = """
         function buttonClick(button) {
             console.log("Button " + button.id + " clicked");
-            send_key(button.id.charCodeAt(0)); // send ASCII code of id
             flashButton(button);
+            send_key(button.id.charCodeAt(0)); // send ASCII code of id
         }
 
         function fadeIn(el,duration,callback) {
@@ -383,6 +383,9 @@ class Interface():
         }
 
         function flashButton(button) {
+            if (!button) {
+                return;
+            }
             if (!button.style) {
                 button.style = window.getComputedStyle(button);
             }
@@ -392,6 +395,12 @@ class Interface():
                     fadeIn(button,flashDuration/3,null);
                 },flashDuration/3);
             });
+        }
+
+        function findButton(keyCode) {
+            var letter = String.fromCharCode(keyCode);
+            var elem = document.getElementById(letter);
+            return elem;
         }
 
         function server_post(url, data, callback_func) {
@@ -452,7 +461,8 @@ class Interface():
 
         // key handler for page
         document.onkeyup = function(event) {
-            console.log("Sending key");
+            var button = findButton(event.keyCode);
+            flashButton(button);
             send_key(event.keyCode);
         }
 
