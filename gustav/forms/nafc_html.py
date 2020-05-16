@@ -133,7 +133,7 @@ class CustomRequestHandler(server_lib.SimpleHTTPRequestHandler):
         length = int(self.headers['Content-Length'])
         data_string = self.rfile.read(length).decode('UTF-8')
         response_str = self.process_json(data_string)
-        print("Responding... " + response_str)
+        #print("Responding... " + response_str)
         self.wfile.write(bytearray(response_str,'UTF-8'))
 
 class CustomTCPServer(sserver.TCPServer,object):
@@ -261,20 +261,25 @@ class Interface():
     def destroy(self):
         self.cmd_queue.push_cmd(Command.quit())
         while not(self.cmd_queue.empty()):
-            time.sleep(0.5) # wait for all commands to be sent
+            time.sleep(1) # wait for all commands to be sent
         sys.exit(0) # server daemon will be stopped
 
     def generate_html(self): #TODO clean this up. this is pretty horrible
+
+        titles = '<p id="align-title" class="float-left">Left Title <span id="right-title" class="float-right">Right Title</span>'
+        notifies = '<div class="notify center notifyright"><span class="vcenter">Sample Text</span></div>\n<div class="notify center notifyleft"><span class="vcenter">Sample Text</span></div>'
+
         button_base_str = '<input class="button" id="$id" type="button" value="$id" onClick="buttonClick(this)"/>\n$insert'
         button_base_tmp = Template(button_base_str)
-        nafc_content = Template("$insert")
+        buttons = Template("$insert")
         for id_val in self.alternatives:
-            nafc_content = Template(nafc_content.safe_substitute({"insert":button_base_str}))
-            nafc_content = Template(nafc_content.safe_substitute({"id":id_val}))
-        nafc_content = nafc_content.safe_substitute({"insert":'<div class="center"><p class="log" id="logid"></p></div>'})
+            buttons = Template(buttons.safe_substitute({"insert":button_base_str}))
+            buttons = Template(buttons.safe_substitute({"id":id_val}))
+        buttons = buttons.safe_substitute({"insert":'<div class="center"><p class="log" id="logid"></p></div>'})
 
-        buttons_centered = Template('<div class="container"><div class="true-center">$content</div></div>').substitute({"content":nafc_content})
-        notifies = '<div class="notify center notifyright"><span class="vcenter">Sample Text</span></div>\n<div class="notify center notifyleft"><span class="vcenter">Sample Text</span></div>'
+        buttons_centered = Template('<div class="container"><div class="true-center">$content</div></div>').substitute({"content":buttons})
+
+        statuses = '<p id="align-status" class="float-left">Left Status <span id="right-status" class="float-right">Right Status</span>'
 
         base_html = """
         <!DOCTYPE html>
@@ -285,13 +290,15 @@ class Interface():
             <link rel="stylesheet" href="css/styles.css">
         </head>
         <body>
+            <div class="titlebar" >$titles</div>
             $notifies
             $buttons
+            <div class="status-bar">$statuses</div>
             <script src="js/main.js"></script>
         </body>
         </html>"""
 
-        doc = Template(base_html).substitute({"notifies": notifies, "buttons":buttons_centered})
+        doc = Template(base_html).substitute({"notifies": notifies, "buttons":buttons_centered,"titles":titles,"statuses":statuses})
         return bytearray(doc,'UTF-8')
 
     def generate_css(self):
@@ -355,6 +362,19 @@ class Interface():
         .button:hover {
             background-color: blue;
             color: white;
+        }
+        .float-right {
+            float:right;
+            margin-right:2em;
+            text-align:left;
+        }
+        .align-left {
+            text-align:left;
+        }
+        .status-bar {
+            bottom: 0px;
+            position: fixed;
+            width: 100%;
         }
         """
         return bytearray(css,'UTF-8')
@@ -475,12 +495,15 @@ class Interface():
                 /* Main Event Processing */
                 if (result) {
                     var events = result["Commands"]
+                    if (!events) {
+                        return;
+                    }
                     for(var i = 0; i < events.length; i++) {
                         var event = events[i]
                         var cmd = event["Command"]
                         switch (cmd) {
                             case "quit":
-                                continuePolling = False;
+                                continuePolling = false;
                                 break;
                             default:
                                 console.log("Undefined command: " + cmd);
@@ -504,7 +527,7 @@ class Interface():
 
         // Poll loop
         // TODO maybe replace this with long polling... this creates a lot of requests
-        var continuePolling = True; // global condition variable
+        var continuePolling = true; // global condition variable
 
         function poll_timeout() {
             var d = new Date();
