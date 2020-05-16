@@ -99,20 +99,18 @@ class CustomRequestHandler(server_lib.SimpleHTTPRequestHandler):
                        }
                       }
         """
-        response_str = "Error processing JSON"
+        response_str = "Error processing client JSON"
 
         try:
+            template = '{ "result" : %s }'
             data = json.loads(data_string)
             if data['EventType'] == 'KeyPress':
                 self.interface.set_key(data['Value'])
-                response_str = "Success"
+                response_str = template % ('"Success"')
             elif data['EventType'] == 'Poll':
-                #print("Polling")
-                response_str = self.interface.cmd_queue.generate_cmdstring()
-            else:
-                response_str = "Invalid EventType: " + data['EventType']
+                response_str = template % self.interface.cmd_queue.generate_cmdstring()
         except Exception as e:
-            print(e)
+            print("Encountered exception: " + str(e))
         finally:
             return response_str
 
@@ -134,8 +132,8 @@ class CustomRequestHandler(server_lib.SimpleHTTPRequestHandler):
         # Response to Website AJAX happens here
         length = int(self.headers['Content-Length'])
         data_string = self.rfile.read(length).decode('UTF-8')
-        result = self.process_json(data_string)
-        response_str = json.dumps({"result":result})
+        response_str = self.process_json(data_string)
+        print("Responding... " + response_str)
         self.wfile.write(bytearray(response_str,'UTF-8'))
 
 class CustomTCPServer(sserver.TCPServer,object):
@@ -148,6 +146,8 @@ class Command:
         self.cmd = c
         self.value = val
         self.id = idval
+    def __str__(self):
+        return "Command: %s %s %s" % (self.cmd,self.value,self.id)
 
     def quit():
         return Command('quit',0,0)
@@ -157,20 +157,35 @@ class Command:
 class CommandQueue:
     def __init__(self):
         self.cmd_list = []
+        self.mutex = threading.Lock()
+    def __str__(self):
+        ret = "Commands: {"
+        for cmd in self.cmd_list:
+            ret += str(cmd) + ", "
+        return ret + "}"
 
-    def push(self,command):
+    def length(self):
+        return len(self.cmd_list)
+
+    def push_cmd(self,command):
+        self.mutex.acquire()
         self.cmd_list.append(command)
-    def pop(self):
-        return self.cmd_list.pop(0)
+        self.mutex.release()
+
+    def pop_cmd(self):
+        self.mutex.acquire()
+        result = self.cmd_list.pop(0)
+        self.mutex.release()
+        return result
 
     def empty(self):
-        return len(self.cmd_list) > 0
+        return len(self.cmd_list) <= 0
 
     def generate_cmdstring(self):
         cmds_dict = dict()
         cmds_dict['Commands'] = []
         while len(self.cmd_list) > 0:
-            entry = self.pop()
+            entry = self.pop_cmd()
             cmd_dict = dict()
             cmd_dict['Command'] = entry.cmd
             cmd_dict['Value'] = entry.value
@@ -243,12 +258,11 @@ class Interface():
         self.server_thread.setDaemon(True)
         self.server_thread.start()
 
-
     def destroy(self):
-        self.cmd_queue.push(Command.quit())
+        self.cmd_queue.push_cmd(Command.quit())
         while not(self.cmd_queue.empty()):
-            time.sleep(100) # finish up commands
-        self.server.server_close() # close the server
+            time.sleep(0.5) # wait for all commands to be sent
+        sys.exit(0) # server daemon will be stopped
 
     def generate_html(self): #TODO clean this up. this is pretty horrible
         button_base_str = '<input class="button" id="$id" type="button" value="$id" onClick="buttonClick(this)"/>\n$insert'
@@ -347,7 +361,6 @@ class Interface():
     def generate_js(self):
         js = """
         function buttonClick(button) {
-            console.log("Button " + button.id + " clicked");
             flashButton(button);
             send_key(button.id.charCodeAt(0)); // send ASCII code of id
         }
@@ -447,12 +460,35 @@ class Interface():
                 return;
             }
             if (request !== false) {
+                var result = null;
                 try {
                     var data = JSON.parse(request.responseText);
+                    console.log(data);
                     logger.innerHTML =  data['result'];
+                    result = data['result'];
                 } catch (e) {
+                    console.log(e)
                     logger.innerHTML = "No server connection";
+                    return;
                 }
+
+                /* Main Event Processing */
+                if (result) {
+                    var events = result["Commands"]
+                    for(var i = 0; i < events.length; i++) {
+                        var event = events[i]
+                        var cmd = event["Command"]
+                        switch (cmd) {
+                            case "quit":
+                                continuePolling = False;
+                                break;
+                            default:
+                                console.log("Undefined command: " + cmd);
+                                break;
+                        }
+                    }
+                }
+
             } else {
                 logger.innerHTML = "Bad request";
                 console.log("Bad request");
@@ -468,12 +504,16 @@ class Interface():
 
         // Poll loop
         // TODO maybe replace this with long polling... this creates a lot of requests
+        var continuePolling = True; // global condition variable
+
         function poll_timeout() {
-             var d = new Date();
+            var d = new Date();
             var now = d.getTime(); // time in ms
             var data = {'EventType':'Poll','Value': 0, 'Timestamp': now};
             server_post("index.html", JSON.stringify(data), parse_response)
-            setTimeout(poll_timeout, 5000);
+            if (continuePolling) {
+                setTimeout(poll_timeout, 5000);
+            }
         }
 
         setTimeout(poll_timeout,5000);
@@ -552,7 +592,6 @@ class Interface():
                 elif key_pressed is None:
                     time.sleep(self.keypress_wait) # Avoid cpu race while looping
                 else:
-                    print("Got key " + key_pressed)
                     return key_pressed
         except Exception as e: 
             print(e)
@@ -961,6 +1000,7 @@ if __name__ == "__main__":
             # User requested to quit. Exit while loop
             waiting = False
             interface.show_Notify_Left()
+            break
         elif key == 'l':
             interface.show_Notify_Left()
         elif key == 'r':
