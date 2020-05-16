@@ -302,9 +302,7 @@ class Interface():
         return bytearray(doc,'UTF-8')
 
     def generate_css(self):
-        button_width = 5
-        button_height = 5
-        css = Template("""
+        css = """
         .container {
             display: block;
             width: 100%;
@@ -395,7 +393,33 @@ class Interface():
             margin-left:-100%;
             margin-right:-100%;
             text-align:center;
-        """).substitute({"button_width":str(100.0/len(self.alternatives)) + "em"})
+        }
+
+        @media screen and (max-width:800px) {
+            .status-bar,.title-bar {
+                font-size:1em;
+                height:1em;
+            }
+            .status-bar {
+                bottom: 2em;
+            }
+            .notify {
+                font-size:1em;
+            }
+            .button {
+                font-size:2em;
+            }
+        }
+
+        @media screen and (max-width:600px) {
+            .notify {
+                font-size:0.75em;
+            }
+            .button {
+                font-size:1em;
+            }
+        }
+        """
         return bytearray(css,'UTF-8')
     def generate_js(self):
         js = """
