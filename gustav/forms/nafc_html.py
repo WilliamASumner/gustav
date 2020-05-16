@@ -177,8 +177,8 @@ class Interface():
         print("Serving on port",self.port)
         try:
             self.server.serve_forever()
-        except:
-            print("Unexpected error on server:", sys.exc_info()[0])
+        except Exception as e:
+            print("Unexpected error on server:" + str(e))
             self.server.server_close()
             sys.exit(1) # Don't continue on an error
 
@@ -224,7 +224,7 @@ class Interface():
             except (OSError,sserver.socket.error):
                 self.port += 1
             except Exception as e:
-                print(e)
+                print("Error starting up server: " + str(e))
                 sys.exit(1)
 
         #TODO clean this up
@@ -422,20 +422,24 @@ class Interface():
         }
 
         function parse_response(request) {
-            var elem = document.getElementById('logid');
-            if (!elem) {
+            var logger = document.getElementById('logid');
+            if (!logger) {
                 console.log("Page log not found");
                 return;
             }
             if (request !== false) {
                 try {
-                    elem.innerHTML =  JSON.parse(request.responseText)['result'];
+                    var data = JSON.parse(request.responseText);
+                    console.log("Data: ");
+                    console.log(data);
+                    logger.innerHTML =  data['result'];
                 } catch (e) {
-                    elem.innerHTML = "PARSE ERROR";
+                    console.log(e.message);
+                    logger.innerHTML = "No server connection";
                 }
             } else {
-                elem.innerHTML = "No server connection";
-                console.log("Error fetching response");
+                logger.innerHTML = "Bad request";
+                console.log("Bad request");
             }
         }
 
@@ -488,7 +492,6 @@ class Interface():
         self.key_mutex.acquire()
         try:
             self.key_value = keyCode
-            print("new self key value: " + chr(self.key_value))
         finally: # just to be safe
             self.key_mutex.release()
             return
@@ -520,7 +523,19 @@ class Interface():
             If timeout is None, then block. If it is a float, wait at 
             least that many seconds, return None if no input.
         """
-        return
+        try:
+            timeout_start = time.time()
+            while True:
+                key_pressed = self.get_key()
+                if (timeout is not None) and (time.time() >= timeout_start + timeout):
+                    return None
+                elif key_pressed is None:
+                    time.sleep(self.keypress_wait) # Avoid cpu race while looping
+                else:
+                    return key_pressed
+        except Exception as e: 
+            print(e)
+            raise Exception("Error reading input")
 
     def update_Title_Left(self, s, redraw=False):
         """Update the text on the left side of the title bar
