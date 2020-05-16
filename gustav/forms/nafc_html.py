@@ -292,7 +292,7 @@ class Interface():
         <body>
             <div class="title-bar"> <div class="abs-pos">$titles</div></div>
             $notifies
-            $buttons
+            <span class="overflow-center">$buttons</span>
             <div class="status-bar">$statuses</div>
             <script src="js/main.js"></script>
         </body>
@@ -302,7 +302,9 @@ class Interface():
         return bytearray(doc,'UTF-8')
 
     def generate_css(self):
-        css = """
+        button_width = 5
+        button_height = 5
+        css = Template("""
         .container {
             display: block;
             width: 100%;
@@ -312,7 +314,7 @@ class Interface():
             vertical-align: center;
         }
         .log {
-        /* placeholder */
+            display:none;
         }
         .true-center {
             position: absolute;
@@ -325,13 +327,11 @@ class Interface():
             margin: 15px;
             border: 1px outset #003B1F;
             background-color: #277650;
-            height: 150px;
-            width: 200px;
+            color: #76B295;
+            height: 3em;
+            width:  3em;
             cursor:pointer;
             padding: 20 20 px;
-            /* outline-width: 2px;
-            outline-style: solid;
-            outline-color: green; */
             outline-offset: 6px;
             border-radius: 5px;
             font-size: 3em;
@@ -342,11 +342,13 @@ class Interface():
         }
         .notify {
             margin: 15px;
+            font-size:1.1em;
             border: 1px outset blue;
             height: 10em; /* 10 lines */
             line-height: 10em;
             width: 20%;
             padding: 20 20 px;
+            border-radius:10px;
         }
         .notifyright {
             background-color: green;
@@ -366,27 +368,34 @@ class Interface():
         
         .float-right {
             float:right;
-            margin-right:2em;
+            margin-right:1em;
             text-align:left;
         }
         .align-left {
             text-align:left;
         }
         .status-bar {
-            bottom: 0px;
+            bottom: 1em;
             position: fixed;
             width: 100%;
+            height: 2em;
+            font-size: 2em;
         }
         .title-bar {
             width: 100%;
             height: 2em;
+            font-size:2em;
         }
         .abs-pos {
             width: 100%;
             top: 0;
             position:absolute;
         }
-        """
+        .overflow-center {
+            margin-left:-100%;
+            margin-right:-100%;
+            text-align:center;
+        """).substitute({"button_width":str(100.0/len(self.alternatives)) + "em"})
         return bytearray(css,'UTF-8')
     def generate_js(self):
         js = """
@@ -1000,7 +1009,7 @@ if __name__ == "__main__":
     # Initialize interface
     # Alternatives can be a number, in which case labels will be "1", "2" etc., or
     # a list where len = # of alternatives, and each item is a single unique char
-    alternatives = ['A', 'B','C']
+    alternatives = ['A', 'B','C','D','E','F']
     interface = Interface(alternatives=alternatives)
     # Add some text
     interface.show_Prompt(False)
