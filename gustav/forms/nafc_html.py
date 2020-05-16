@@ -163,6 +163,9 @@ class Interface():
         self.status_r_str = ""
         self.prompt = prompt
 
+        self.key_value = 0
+        self.cmd_queue = CommandQueue()
+
         self.keypress_wait = .005 # Sleep time in sec during keypress loop to avoid cpu race
                                   # Longer values are better for slower machines
         
@@ -199,8 +202,7 @@ class Interface():
 
     def destroy(self):
         self.server.server_close()
-        #close_url = Template("localhost:$port/close.html").substitute({"port":self.port})
-        #self.browser.open(close_url,new=0)
+        self.cmd_queue.push(Command.quit())
 
 
     def generate_html(self): #TODO clean this up. this is pretty horrible
