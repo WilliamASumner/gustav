@@ -266,7 +266,7 @@ class Interface():
 
     def generate_html(self): #TODO clean this up. this is pretty horrible
 
-        titles = '<p id="align-title" class="float-left">Left Title <span id="right-title" class="float-right">Right Title</span>'
+        titles = '<p id="align-left" class="float-left">Left Title <span id="right-title" class="float-right">Right Title</span>'
         notifies = '<div class="notify center notifyright"><span class="vcenter">Sample Text</span></div>\n<div class="notify center notifyleft"><span class="vcenter">Sample Text</span></div>'
 
         button_base_str = '<input class="button" id="$id" type="button" value="$id" onClick="buttonClick(this)"/>\n$insert'
@@ -279,7 +279,7 @@ class Interface():
 
         buttons_centered = Template('<div class="container"><div class="true-center">$content</div></div>').substitute({"content":buttons})
 
-        statuses = '<p id="align-status" class="float-left">Left Status <span id="right-status" class="float-right">Right Status</span>'
+        statuses = '<p id="align-left" class="float-left">Left Status <span id="right-status" class="float-right">Right Status</span>'
 
         base_html = """
         <!DOCTYPE html>
@@ -290,7 +290,7 @@ class Interface():
             <link rel="stylesheet" href="css/styles.css">
         </head>
         <body>
-            <div class="titlebar" >$titles</div>
+            <div class="title-bar"> <div class="abs-pos">$titles</div></div>
             $notifies
             $buttons
             <div class="status-bar">$statuses</div>
@@ -323,17 +323,22 @@ class Interface():
         }
         .button {
             margin: 15px;
-            border: 1px outset blue;
-            background-color: lightBlue;
+            border: 1px outset #003B1F;
+            background-color: #277650;
             height: 150px;
             width: 200px;
             cursor:pointer;
             padding: 20 20 px;
-            outline-width: 2px;
+            /* outline-width: 2px;
             outline-style: solid;
-            outline-color: green;
+            outline-color: green; */
             outline-offset: 6px;
             border-radius: 5px;
+            font-size: 3em;
+        }
+        .button:hover {
+            background-color: #4A9470;
+            color: white;
         }
         .notify {
             margin: 15px;
@@ -358,11 +363,7 @@ class Interface():
             vertical-align:middle;
             line-height:normal;
         }
-
-        .button:hover {
-            background-color: blue;
-            color: white;
-        }
+        
         .float-right {
             float:right;
             margin-right:2em;
@@ -375,6 +376,15 @@ class Interface():
             bottom: 0px;
             position: fixed;
             width: 100%;
+        }
+        .title-bar {
+            width: 100%;
+            height: 2em;
+        }
+        .abs-pos {
+            width: 100%;
+            top: 0;
+            position:absolute;
         }
         """
         return bytearray(css,'UTF-8')
