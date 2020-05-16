@@ -107,7 +107,8 @@ class CustomRequestHandler(server_lib.SimpleHTTPRequestHandler):
                 self.interface.set_key(data['Value'])
                 response_str = "Success"
             elif data['EventType'] == 'Poll':
-                response_str = self.interface.event_queue.generate_commands()
+                #print("Polling")
+                response_str = self.interface.cmd_queue.generate_cmdstring()
             else:
                 response_str = "Invalid EventType: " + data['EventType']
         except Exception as e:
@@ -147,8 +148,10 @@ class Command:
         self.cmd = c
         self.value = val
         self.id = idval
+
     def quit():
         return Command('quit',0,0)
+
     quit = staticmethod(quit)
 
 class CommandQueue:
@@ -157,19 +160,22 @@ class CommandQueue:
 
     def push(self,command):
         self.cmd_list.append(command)
-
     def pop(self):
         return self.cmd_list.pop(0)
-    def generate_commands(self):
+
+    def empty(self):
+        return len(self.cmd_list) > 0
+
+    def generate_cmdstring(self):
         cmds_dict = dict()
         cmds_dict['Commands'] = []
-        for entry in self.cmd_list:
+        while len(self.cmd_list) > 0:
+            entry = self.pop()
             cmd_dict = dict()
             cmd_dict['Command'] = entry.cmd
             cmd_dict['Value'] = entry.value
             cmd_dict['ID'] = entry.id
             cmds_dict['Commands'].append(cmd_dict)
-
         return json.dumps(cmds_dict)
 
 class Interface():
@@ -216,6 +222,9 @@ class Interface():
             self.button_colors.append(0)
             self.button_borders.append(1)
 
+        self.button_color_names = ['None', 'Grey', 'Green', 'Red', 'Yellow'] # Allow user to specify color/border by name
+        self.button_border_names = ['None', 'Light', 'Heavy', 'Double']      # Must be in same order as button_f_colors 
+
         self.port = 8000
         while True:
             try:
@@ -236,8 +245,10 @@ class Interface():
 
 
     def destroy(self):
-        self.server.server_close()
         self.cmd_queue.push(Command.quit())
+        while not(self.cmd_queue.empty()):
+            time.sleep(100) # finish up commands
+        self.server.server_close() # close the server
 
     def generate_html(self): #TODO clean this up. this is pretty horrible
         button_base_str = '<input class="button" id="$id" type="button" value="$id" onClick="buttonClick(this)"/>\n$insert'
@@ -414,7 +425,6 @@ class Interface():
         }
 
         function send_key(keyCode) {
-            //TODO this will have to become a polling function
             var d = new Date();
             var now = d.getTime(); // time in ms
             var data = {'EventType':'KeyPress','Value':keyCode, 'Timestamp': now};
@@ -450,13 +460,13 @@ class Interface():
 
         // Poll loop
         // TODO maybe replace this with long polling... this creates a lot of requests
-        /*(function poll() {
+        (function poll() {
             var d = new Date();
             var now = d.getTime(); // time in ms
             var data = {'EventType':'Poll','Value': 0, 'Timestamp': now};
             server_post("index.html", JSON.stringify(data), parse_response)
-            setTimeout(poll, 20);
-        }());*/
+            setTimeout(poll, 200);
+        }());
 
         """
         return bytearray(js,'UTF-8')
