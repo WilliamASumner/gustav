@@ -440,11 +440,8 @@ class Interface():
             if (request !== false) {
                 try {
                     var data = JSON.parse(request.responseText);
-                    console.log("Data: ");
-                    console.log(data);
                     logger.innerHTML =  data['result'];
                 } catch (e) {
-                    console.log(e.message);
                     logger.innerHTML = "No server connection";
                 }
             } else {
@@ -455,19 +452,21 @@ class Interface():
 
         // key handler for page
         document.onkeyup = function(event) {
+            console.log("Sending key");
             send_key(event.keyCode);
         }
 
         // Poll loop
         // TODO maybe replace this with long polling... this creates a lot of requests
-        (function poll() {
-            var d = new Date();
+        function poll_timeout() {
+             var d = new Date();
             var now = d.getTime(); // time in ms
             var data = {'EventType':'Poll','Value': 0, 'Timestamp': now};
             server_post("index.html", JSON.stringify(data), parse_response)
-            setTimeout(poll, 200);
-        }());
+            setTimeout(poll_timeout, 5000);
+        }
 
+        setTimeout(poll_timeout,5000);
         """
         return bytearray(js,'UTF-8')
 
@@ -477,6 +476,7 @@ class Interface():
             Called when term is resized, or manually by user
 
         """
+        # Nothing to do here... browser will update as other functions update
         return
     
     def rectangle(self, win, uly, ulx, lry, lrx):
@@ -542,6 +542,7 @@ class Interface():
                 elif key_pressed is None:
                     time.sleep(self.keypress_wait) # Avoid cpu race while looping
                 else:
+                    print("Got key " + key_pressed)
                     return key_pressed
         except Exception as e: 
             print(e)
