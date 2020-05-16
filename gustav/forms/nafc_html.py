@@ -21,6 +21,7 @@
 #
 
 import os,sys
+import time
 import ctypes
 import webbrowser
 import threading
