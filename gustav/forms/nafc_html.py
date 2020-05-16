@@ -302,7 +302,7 @@ class Interface():
         js = """
         function buttonClick(button) {
             console.log("Button " + button.id + " clicked");
-            send_input(button.id.charCodeAt(0)); // send ASCII code of id
+            send_key(button.id.charCodeAt(0)); // send ASCII code of id
             flashButton(button);
         }
 
@@ -378,7 +378,7 @@ class Interface():
             request.send(data);
         }
 
-        function send_input(keyCode) {
+        function send_key(keyCode) {
             //TODO this will have to become a polling function
             var data = {'key':keyCode};
             server_post("index.html", JSON.stringify(data), parse_response)
@@ -404,7 +404,7 @@ class Interface():
 
         // key handler for page
         document.onkeyup = function(event) {
-            send_input(event.keyCode);
+            send_key(event.keyCode);
         }
         """
         return bytearray(js,'UTF-8')
