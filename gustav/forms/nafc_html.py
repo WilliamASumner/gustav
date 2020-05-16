@@ -38,7 +38,7 @@ else:
 
 # Adapted from https://gist.github.com/bradmontgomery/2219997
 class CustomRequestHandler(server_lib.SimpleHTTPRequestHandler):
-    Interface = None
+    interface = None
 
     if (os.name=='nt'): # Windows
         nullFile = 'C:\\nul'
@@ -46,7 +46,7 @@ class CustomRequestHandler(server_lib.SimpleHTTPRequestHandler):
         nullFile = '/dev/null'
 
     def connect_interface(self,InterfaceInstance):
-        self.Interface = InterfaceInstance
+        self.interface = InterfaceInstance
 
     # https://stackoverflow.com/questions/25360798/save-logs-simplehttpserver
     # Output is not needed from Server
@@ -74,13 +74,13 @@ class CustomRequestHandler(server_lib.SimpleHTTPRequestHandler):
         #Response to resource request
         if re.match("^/$",self.path) or re.match("/index.html",self.path):
             self.set_response_headers("text/html")
-            self.wfile.write(self.Interface.generate_html())
+            self.wfile.write(self.interface.generate_html())
         elif re.match(".*css",self.path):
             self.set_response_headers("text/css")
-            self.wfile.write(self.Interface.generate_css())
+            self.wfile.write(self.interface.generate_css())
         elif re.match(".*js",self.path):
             self.set_response_headers("application/javascript")
-            self.wfile.write(self.Interface.generate_js())
+            self.wfile.write(self.interface.generate_js())
 
     def do_POST(self):
         # Response to Website AJAX happens here
@@ -104,7 +104,7 @@ class CustomRequestHandler(server_lib.SimpleHTTPRequestHandler):
 
 class CustomTCPServer(sserver.TCPServer,object):
     def __init__(self,server_address,RequestHandler,InterfaceInstance):
-        RequestHandler.Interface = InterfaceInstance # TODO clean this up
+        RequestHandler.interface = InterfaceInstance # TODO clean this up
         super(CustomTCPServer,self).__init__(server_address,RequestHandler)
 
 class Interface():
