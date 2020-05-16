@@ -68,7 +68,53 @@ class CustomRequestHandler(server_lib.SimpleHTTPRequestHandler):
         self.send_header("Content-type","application/json")
         self.end_headers()
 
-    def parse_json(self,data_string):
+    def process_json(self,data_string):
+        """ Parse and then respond to AJAX request
+
+        JSON Events are sent as follows:
+
+        From Browser: { 'EventType': 'KeyPress or Poll',
+                        'Value'    : 'KeyCode or Null',
+                        'Time'     : 'Timestamp or Null' }
+
+        To Browser:   'result': { 'Commands' : '{
+                          'Command':
+                            0  - show_notify_left
+                            1  - show_notify_right
+                            2  - update_notify_left
+                            3  - update_notify_right
+                            4  - update_status_left
+                            5  - update_status_right
+                            6  - update_status_center
+                            7  - update_title_left
+                            8  - update_title_right
+                            9  - update_title_center
+                            10 - show_buttons
+                            11 - show_prompt
+                            12 - set_border
+                            13 - set_color
+                            14 - quit',
+                         'Value' : 'Hex Color or Text',
+                         'IDs' : 'Alternative Name (e.g. A, B, C)
+                       }
+                      }
+        """
+        response_str = "Error processing JSON"
+
+        try:
+            data = json.loads(data_string)
+            if data['EventType'] == 'KeyPress':
+                self.interface.set_key(data['Value'])
+                response_str = "Success"
+            elif data['EventType'] == 'Poll':
+                response_str = self.interface.event_queue.generate_commands()
+            else:
+                response_str = "Invalid EventType: " + data['EventType']
+        except Exception as e:
+            print(e)
+        finally:
+            return response_str
+
         return json.loads(data_string)
 
     def do_GET(self):
@@ -87,19 +133,7 @@ class CustomRequestHandler(server_lib.SimpleHTTPRequestHandler):
         # Response to Website AJAX happens here
         length = int(self.headers['Content-Length'])
         data_string = self.rfile.read(length).decode('UTF-8')
-        data = "Error"
-        try:
-            data = self.parse_json(data_string)
-            key = chr(data['key'])
-            if int(data['key']) in range(37,41):
-                key = ['Left Arrow','Up Arrow', 'Right Arrow', 'Down Arrow'][data['key']-37]
-            result = "Key pressed was " + str(data['key']) + ": " + key
-        except KeyError:
-            result = "Missing key: 'key'"
-        except Exception as e:
-            print(e)
-            result = 'Error parsing data'
-        print("Recieved input: " + str(data))
+        result = self.process_json(data_string)
         response_str = json.dumps({"result":result})
         self.wfile.write(bytearray(response_str,'UTF-8'))
 
@@ -164,6 +198,7 @@ class Interface():
         self.prompt = prompt
 
         self.key_value = 0
+        self.key_mutex = threading.Lock() # mutex for accessing keypress
         self.cmd_queue = CommandQueue()
 
         self.keypress_wait = .005 # Sleep time in sec during keypress loop to avoid cpu race
@@ -380,7 +415,9 @@ class Interface():
 
         function send_key(keyCode) {
             //TODO this will have to become a polling function
-            var data = {'key':keyCode};
+            var d = new Date();
+            var now = d.getTime(); // time in ms
+            var data = {'EventType':'KeyPress','Value':keyCode, 'Timestamp': now};
             server_post("index.html", JSON.stringify(data), parse_response)
         }
 
@@ -406,6 +443,17 @@ class Interface():
         document.onkeyup = function(event) {
             send_key(event.keyCode);
         }
+
+        // Poll loop
+        // TODO maybe replace this with long polling... this creates a lot of requests
+        /*(function poll() {
+            var d = new Date();
+            var now = d.getTime(); // time in ms
+            var data = {'EventType':'Poll','Value': 0, 'Timestamp': now};
+            server_post("index.html", JSON.stringify(data), parse_response)
+            setTimeout(poll, 20);
+        }());*/
+
         """
         return bytearray(js,'UTF-8')
 
@@ -433,6 +481,29 @@ class Interface():
         """
         recip = 1/float(base)
         return round(x * recip) / recip
+
+    def set_key(self,keyCode):
+        """ Save keypress from browser
+        """
+        self.key_mutex.acquire()
+        try:
+            self.key_value = keyCode
+            print("new self key value: " + chr(self.key_value))
+        finally: # just to be safe
+            self.key_mutex.release()
+            return
+
+    def get_key(self):
+        """ Retrieve keypress
+        """
+        self.key_mutex.acquire()
+        result = self.key_value
+        self.key_value = 0
+        self.key_mutex.release()
+
+        if result == 0:
+            return None
+        return chr(result).lower() # return lowercase ascii
 
 
     #########################################################################
