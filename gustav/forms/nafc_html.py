@@ -108,6 +108,36 @@ class CustomTCPServer(sserver.TCPServer,object):
         RequestHandler.interface = InterfaceInstance # TODO clean this up
         super(CustomTCPServer,self).__init__(server_address,RequestHandler)
 
+class Command:
+    def __init__(self,c,val,idval):
+        self.cmd = c
+        self.value = val
+        self.id = idval
+    def quit():
+        return Command('quit',0,0)
+    quit = staticmethod(quit)
+
+class CommandQueue:
+    def __init__(self):
+        self.cmd_list = []
+
+    def push(self,command):
+        self.cmd_list.append(command)
+
+    def pop(self):
+        return self.cmd_list.pop(0)
+    def generate_commands(self):
+        cmds_dict = dict()
+        cmds_dict['Commands'] = []
+        for entry in self.cmd_list:
+            cmd_dict = dict()
+            cmd_dict['Command'] = entry.cmd
+            cmd_dict['Value'] = entry.value
+            cmd_dict['ID'] = entry.id
+            cmds_dict['Commands'].append(cmd_dict)
+
+        return json.dumps(cmds_dict)
+
 class Interface():
     def start_server_thread(self):
         print("Serving on port",self.port)
