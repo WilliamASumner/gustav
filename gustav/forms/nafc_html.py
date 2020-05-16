@@ -137,7 +137,7 @@ class Interface():
                                   # Longer values are better for slower machines
         
         if isinstance(alternatives, list):
-            self.alternatives = alternatives 
+            self.alternatives = alternatives
         else:
             self.alternatives = []
             for i in range(alternatives):
@@ -162,7 +162,9 @@ class Interface():
         #TODO clean this up
         self.browser = webbrowser.get() # get befault browser
         self.browser.open("http://localhost:" + str(self.port))
-        self.server_thread = threading.Thread(target=self.start_server_thread(),daemon=True) # start server in background
+        self.server_thread = threading.Thread(target=self.start_server_thread) # start server in background
+        self.server_thread.setDaemon(True)
+        self.server_thread.start()
 
 
     def destroy(self):
