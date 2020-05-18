@@ -506,6 +506,7 @@ class Interface():
                     callback_func(request);
                 }
             }
+            request.overrideMimeType("application/json");
             request.send(data);
         }
 
@@ -513,7 +514,7 @@ class Interface():
             var d = new Date();
             var now = d.getTime(); // time in ms
             var data = {'EventType':'KeyPress','Value':keyCode, 'Timestamp': now};
-            server_post("index.html", JSON.stringify(data), parse_response)
+            server_post("response.json", JSON.stringify(data), parse_response)
         }
 
         function parse_response(request) {
