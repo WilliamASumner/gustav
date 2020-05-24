@@ -305,7 +305,7 @@ class Interface():
         css = """
         .container {
             display: block;
-            width: 100%;
+            width: 98%;
         }
         .center {
             text-align: center;
@@ -385,7 +385,7 @@ class Interface():
             font-size:2em;
         }
         .abs-pos {
-            width: 100%;
+            width: 99%;
             top: 0;
             position:absolute;
         }
