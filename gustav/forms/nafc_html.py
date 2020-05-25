@@ -40,23 +40,22 @@ else:
 # Adapted from https://gist.github.com/bradmontgomery/2219997
 class CustomRequestHandler(server_lib.SimpleHTTPRequestHandler):
     interface = None
-
-    if (os.name=='nt'): # Windows
-        nullFile = 'C:\\nul'
-    elif (os.name == 'posix'): # Linux
-        nullFile = '/dev/null'
+    logging = False
 
     def connect_interface(self,InterfaceInstance):
         self.interface = InterfaceInstance
 
     # https://stackoverflow.com/questions/25360798/save-logs-simplehttpserver
-    # Output is not needed from Server
     def log_message(self, format, *args):
-        log_file = open(self.nullFile, 'a', 1) # output not needed
-        log_file.write("%s - - [%s] %s\n" %
-                            (self.client_address[0],
-                             self.log_date_time_string(),
-                             format%args))
+        """
+        Method for writing out errors/log messages
+        """
+        if self.logging:
+            log_file = open('logfile.txt', 'a', 1) # output not needed
+            log_file.write(
+                "%s - - [%s] %s\n" % (self.client_address[0],
+                    self.log_date_time_string(),
+                    format%args))
 
     def set_response_headers(self,kind):
         self.send_response(200)
@@ -99,46 +98,61 @@ class CustomRequestHandler(server_lib.SimpleHTTPRequestHandler):
                        }
                       }
         """
+
         response_str = "Error processing client JSON"
 
         try:
             template = '{ "result" : %s }'
             data = json.loads(data_string)
+
             if data['EventType'] == 'KeyPress':
                 self.interface.set_key(data['Value'])
                 response_str = template % ('"Success"')
+
             elif data['EventType'] == 'Poll':
-                response_str = template % self.interface.cmd_queue.generate_cmdstring()
+                response_str = template % self.interface.cmd_queue.gen_cmdstr()
+
         except Exception as e:
             print("Encountered exception: " + str(e))
+
         finally:
             return response_str
 
         return json.loads(data_string)
 
     def do_GET(self):
-        #Response to resource request
+        """
+        Responds to all HTTP GET requests for things like html, css, js
+        """
+
         if re.match("^/$",self.path) or re.match("/index.html",self.path):
             self.set_response_headers("text/html")
             self.wfile.write(self.interface.generate_html())
+
         elif re.match(".*css",self.path):
             self.set_response_headers("text/css")
             self.wfile.write(self.interface.generate_css())
+
         elif re.match(".*js",self.path):
             self.set_response_headers("application/javascript")
             self.wfile.write(self.interface.generate_js())
 
     def do_POST(self):
-        # Response to Website AJAX happens here
+        """
+        Responds to all HTTP POST requests that send data here
+        """
+
         length = int(self.headers['Content-Length'])
         data_string = self.rfile.read(length).decode('UTF-8')
         response_str = self.process_json(data_string)
-        #print("Responding... " + response_str)
+        self.set_ajax_headers();
+
         self.wfile.write(bytearray(response_str,'UTF-8'))
 
 class CustomTCPServer(sserver.TCPServer,object):
-    def __init__(self,server_address,RequestHandler,InterfaceInstance):
-        RequestHandler.interface = InterfaceInstance # TODO clean this up
+    def __init__(self,server_address,RequestHandler,InterfaceInstance,logging=False):
+        RequestHandler.interface = InterfaceInstance
+        RequestHandler.logging = logging
         super(CustomTCPServer,self).__init__(server_address,RequestHandler)
 
 class Command:
@@ -146,6 +160,7 @@ class Command:
         self.cmd = c
         self.value = val
         self.id = idval
+
     def __str__(self):
         return "Command: %s %s %s" % (self.cmd,self.value,self.id)
 
@@ -158,10 +173,12 @@ class CommandQueue:
     def __init__(self):
         self.cmd_list = []
         self.mutex = threading.Lock()
+
     def __str__(self):
         ret = "Commands: {"
         for cmd in self.cmd_list:
             ret += str(cmd) + ", "
+
         return ret + "}"
 
     def length(self):
@@ -176,14 +193,16 @@ class CommandQueue:
         self.mutex.acquire()
         result = self.cmd_list.pop(0)
         self.mutex.release()
+
         return result
 
     def empty(self):
         return len(self.cmd_list) <= 0
 
-    def generate_cmdstring(self):
+    def gen_cmdstr(self):
         cmds_dict = dict()
         cmds_dict['Commands'] = []
+
         while len(self.cmd_list) > 0:
             entry = self.pop_cmd()
             cmd_dict = dict()
@@ -191,6 +210,7 @@ class CommandQueue:
             cmd_dict['Value'] = entry.value
             cmd_dict['ID'] = entry.id
             cmds_dict['Commands'].append(cmd_dict)
+
         return json.dumps(cmds_dict)
 
 class Interface():
@@ -198,6 +218,7 @@ class Interface():
         print("Serving on port",self.port)
         try:
             self.server.serve_forever()
+
         except Exception as e:
             print("Unexpected error on server:" + str(e))
             self.server.server_close()
@@ -260,14 +281,26 @@ class Interface():
 
     def destroy(self):
         self.cmd_queue.push_cmd(Command.quit())
+
         while not(self.cmd_queue.empty()):
             time.sleep(1) # wait for all commands to be sent
+
         sys.exit(0) # server daemon will be stopped
 
-    def generate_html(self): #TODO clean this up. this is pretty horrible
+    def generate_html(self):
 
-        titles = '<p id="align-left" class="float-left">Left Title <span id="right-title" class="float-right">Right Title</span>'
-        notifies = '<div class="notify center notifyright"><span class="vcenter">Sample Text</span></div>\n<div class="notify center notifyleft"><span class="vcenter">Sample Text</span></div>'
+        titles = """
+            <p id="align-left" class="float-left">
+                Left Title <span id="right-title" class="float-right">Right Title</span>
+            </p>"""
+
+        notifies = """
+            <div class="notify center notifyright">
+                <span class="vcenter">Sample Text</span></div>
+                <div class="notify center notifyleft">
+                    <span class="vcenter">Sample Text</span>
+                </div>
+            </div>"""
 
         button_base_str = '<input class="button" id="$id" type="button" value="$id" onClick="buttonClick(this)"/>\n$insert'
         button_base_tmp = Template(button_base_str)
@@ -279,7 +312,10 @@ class Interface():
 
         buttons_centered = Template('<div class="container"><div class="true-center">$content</div></div>').substitute({"content":buttons})
 
-        statuses = '<p id="align-left" class="float-left">Left Status <span id="right-status" class="float-right">Right Status</span>'
+        statuses = """
+            <p id="align-left" class="float-left">
+                Left Status <span id="right-status" class="float-right">Right Status</span>
+            </p>"""
 
         base_html = """
         <!DOCTYPE html>
@@ -421,6 +457,7 @@ class Interface():
         }
         """
         return bytearray(css,'UTF-8')
+
     def generate_js(self):
         js = """
         function buttonClick(button) {
@@ -585,6 +622,7 @@ class Interface():
 
         setTimeout(poll_timeout,5000);
         """
+
         return bytearray(js,'UTF-8')
 
     def redraw(self):
@@ -617,8 +655,10 @@ class Interface():
         """ Save keypress from browser
         """
         self.key_mutex.acquire()
+
         try:
             self.key_value = keyCode
+
         finally: # just to be safe
             self.key_mutex.release()
             return
@@ -633,6 +673,7 @@ class Interface():
 
         if result == 0:
             return None
+
         return chr(result).lower() # return lowercase ascii
 
 
@@ -652,14 +693,17 @@ class Interface():
         """
         try:
             timeout_start = time.time()
+
             while True:
                 key_pressed = self.get_key()
+
                 if (timeout is not None) and (time.time() >= timeout_start + timeout):
                     return None
                 elif key_pressed is None:
                     time.sleep(self.keypress_wait) # Avoid cpu race while looping
                 else:
                     return key_pressed
+
         except Exception as e: 
             print(e)
             raise Exception("Error reading input")
