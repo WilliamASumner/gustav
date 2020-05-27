@@ -27,7 +27,6 @@ from string import Template
 import threading
 
 from ajax import CommandQueue
-from local_server import CustomTCPServer, CustomRequestHandler, LocalServer, SockError
 
 class Interface():
     def __init__(self,alternatives=2, prompt="Choose an alternative", isServingLocal=True):
@@ -66,12 +65,6 @@ class Interface():
 
         self.button_color_names = ['None', 'Grey', 'Green', 'Red', 'Yellow'] # Allow user to specify color/border by name
         self.button_border_names = ['None', 'Light', 'Heavy', 'Double']      # Must be in same order as button_f_colors 
-
-        self.isServingLocal = isServingLocal
-
-        if self.isServingLocal:
-            self.local_server = LocalServer(self).start()
-
 
     def destroy(self):
         self.cmd_queue.quit()
@@ -117,19 +110,19 @@ class Interface():
         <head>
             <meta charset="utf-8">
             <title>NAFC</title>
-            <link rel="stylesheet" href="css/styles.css">
+            <link rel="stylesheet" href="/nafc/css/styles.css">
         </head>
         <body>
             <div class="title-bar"> <div class="abs-pos">$titles</div></div>
             $notifies
             <span class="overflow-center">$buttons</span>
             <div class="status-bar">$statuses</div>
-            <script src="js/main.js"></script>
+            <script src="/nafc/js/main.js"></script>
         </body>
         </html>"""
 
         doc = Template(base_html).substitute({"notifies": notifies, "buttons":buttons_centered,"titles":titles,"statuses":statuses})
-        return bytearray(doc,'UTF-8')
+        return doc#bytearray(doc,'UTF-8')
 
     def generate_css(self):
         css = """
@@ -250,7 +243,7 @@ class Interface():
             }
         }
         """
-        return bytearray(css,'UTF-8')
+        return css#bytearray(css,'UTF-8')
 
     def generate_js(self):
         js = """
@@ -417,7 +410,7 @@ class Interface():
         setTimeout(poll_timeout,5000);
         """
 
-        return bytearray(js,'UTF-8')
+        return js#bytearray(js,'UTF-8')
 
     def redraw(self):
         """Draw entire window

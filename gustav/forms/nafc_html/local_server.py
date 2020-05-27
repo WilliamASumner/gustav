@@ -1,8 +1,10 @@
-import sys
+import os, sys
 import re
 import threading
 import webbrowser
 from ajax import process_ajax
+
+import 
 
 if sys.version_info[0] == 2:
     import SocketServer as sserver
@@ -82,8 +84,8 @@ class CustomTCPServer(sserver.TCPServer,object):
         super(CustomTCPServer,self).__init__(server_address,RequestHandler)
 
 class LocalServer:
-    def __init__(self, interface):
-        self.interface = interface
+    def __init__(self, app):
+        self.interface = app.interface
         self.port = 8000
         self.server_thread = threading.Thread(target=self.start_server_thread) # start server in background
 
