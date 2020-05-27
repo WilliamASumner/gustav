@@ -40,7 +40,7 @@ sudo apachectl restart
 
 4. The URL `http://YOUR_SITE/ALIAS_NAME` should now show the following output: 
 <h1>This is the homepage!</h1>
-and the following output for ALIAS\_NAME/test:
+and the following output for `http://YOUR_SITE/ALIAS\_NAME/test`:
 <h1>This is the test page!</h1>
 
 ## Errors
