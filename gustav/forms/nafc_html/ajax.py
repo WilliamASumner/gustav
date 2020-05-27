@@ -1,4 +1,5 @@
 import json
+import threading
 
 def process_ajax(interface,data_string):
     """ Parse and then respond to AJAX request
@@ -52,4 +53,59 @@ def process_ajax(interface,data_string):
         return response_str
 
 
+class Command:
+    def __init__(self,c,val,idval):
+        self.cmd = c
+        self.value = val
+        self.id = idval
 
+    def __str__(self):
+        return "Command: %s %s %s" % (self.cmd,self.value,self.id)
+
+
+class CommandQueue:
+    def __init__(self):
+        self.cmd_list = []
+        self.mutex = threading.Lock()
+
+    def __str__(self):
+        ret = "Commands: {"
+        for cmd in self.cmd_list:
+            ret += str(cmd) + ", "
+
+        return ret + "}"
+
+    def length(self):
+        return len(self.cmd_list)
+
+    def push_cmd(self,command):
+        self.mutex.acquire()
+        self.cmd_list.append(command)
+        self.mutex.release()
+
+    def pop_cmd(self):
+        self.mutex.acquire()
+        result = self.cmd_list.pop(0)
+        self.mutex.release()
+
+        return result
+
+    def empty(self):
+        return len(self.cmd_list) <= 0
+
+    def gen_cmdstr(self):
+        cmds_dict = dict()
+        cmds_dict['Commands'] = []
+
+        while len(self.cmd_list) > 0:
+            entry = self.pop_cmd()
+            cmd_dict = dict()
+            cmd_dict['Command'] = entry.cmd
+            cmd_dict['Value'] = entry.value
+            cmd_dict['ID'] = entry.id
+            cmds_dict['Commands'].append(cmd_dict)
+
+        return json.dumps(cmds_dict)
+
+    def quit(self):
+        return self.push_cmd(Command('quit',0,0))

@@ -29,7 +29,7 @@ from string import Template
 import re
 import json
 
-from ajax import process_ajax
+from ajax import process_ajax, CommandQueue
 
 if sys.version_info[0] == 2:
     import SocketServer as sserver
@@ -37,7 +37,6 @@ if sys.version_info[0] == 2:
 else:
     import socketserver as sserver
     import http.server as server_lib
-
 
 # Adapted from https://gist.github.com/bradmontgomery/2219997
 class CustomRequestHandler(server_lib.SimpleHTTPRequestHandler):
@@ -107,63 +106,6 @@ class CustomTCPServer(sserver.TCPServer,object):
         RequestHandler.logging = logging
         super(CustomTCPServer,self).__init__(server_address,RequestHandler)
 
-class Command:
-    def __init__(self,c,val,idval):
-        self.cmd = c
-        self.value = val
-        self.id = idval
-
-    def __str__(self):
-        return "Command: %s %s %s" % (self.cmd,self.value,self.id)
-
-    def quit():
-        return Command('quit',0,0)
-
-    quit = staticmethod(quit)
-
-class CommandQueue:
-    def __init__(self):
-        self.cmd_list = []
-        self.mutex = threading.Lock()
-
-    def __str__(self):
-        ret = "Commands: {"
-        for cmd in self.cmd_list:
-            ret += str(cmd) + ", "
-
-        return ret + "}"
-
-    def length(self):
-        return len(self.cmd_list)
-
-    def push_cmd(self,command):
-        self.mutex.acquire()
-        self.cmd_list.append(command)
-        self.mutex.release()
-
-    def pop_cmd(self):
-        self.mutex.acquire()
-        result = self.cmd_list.pop(0)
-        self.mutex.release()
-
-        return result
-
-    def empty(self):
-        return len(self.cmd_list) <= 0
-
-    def gen_cmdstr(self):
-        cmds_dict = dict()
-        cmds_dict['Commands'] = []
-
-        while len(self.cmd_list) > 0:
-            entry = self.pop_cmd()
-            cmd_dict = dict()
-            cmd_dict['Command'] = entry.cmd
-            cmd_dict['Value'] = entry.value
-            cmd_dict['ID'] = entry.id
-            cmds_dict['Commands'].append(cmd_dict)
-
-        return json.dumps(cmds_dict)
 
 class Interface():
     def start_server_thread(self):
@@ -232,7 +174,7 @@ class Interface():
         self.server_thread.start()
 
     def destroy(self):
-        self.cmd_queue.push_cmd(Command.quit())
+        self.cmd_queue.quit()
 
         while not(self.cmd_queue.empty()):
             time.sleep(1) # wait for all commands to be sent
