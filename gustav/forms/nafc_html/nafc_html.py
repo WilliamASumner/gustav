@@ -24,6 +24,7 @@ import os,sys
 import time
 import ctypes
 from string import Template
+import threading
 
 from ajax import CommandQueue
 from local_server import CustomTCPServer, CustomRequestHandler, LocalServer, SockError
