@@ -1,4 +1,10 @@
 import re 
+import sys
+
+nafc_lib = "/var/www/wsgi/"
+if nafc_lib not in sys.path:
+    sys.path.insert(0,nafc_lib)
+
 from ajax import process_ajax
 from nafc_html_remote import Interface
 
