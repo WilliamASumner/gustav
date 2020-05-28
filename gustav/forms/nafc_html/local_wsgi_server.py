@@ -5,7 +5,7 @@ import webbrowser
 from wsgiref.util import setup_testing_defaults
 from wsgiref.simple_server import make_server
 
-from application import application
+from wsgi_test_script import application
 
 class LocalServer:
     def __init__(self, interface):
