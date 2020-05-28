@@ -122,7 +122,7 @@ class Interface():
         </html>"""
 
         doc = Template(base_html).substitute({"notifies": notifies, "buttons":buttons_centered,"titles":titles,"statuses":statuses})
-        return doc#bytearray(doc,'UTF-8')
+        return doc
 
     def generate_css(self):
         css = """
@@ -243,15 +243,10 @@ class Interface():
             }
         }
         """
-        return css#bytearray(css,'UTF-8')
+        return css
 
-    def generate_js(self):
+    def generate_button_js(self):
         js = """
-        function buttonClick(button) {
-            flashButton(button);
-            send_key(button.id.charCodeAt(0)); // send ASCII code of id
-        }
-
         function fadeIn(el,duration,callback) {
             var opacity = 0.0;
             var increment = 20.0/duration;
@@ -301,7 +296,33 @@ class Interface():
             var letter = String.fromCharCode(keyCode);
             var elem = document.getElementById(letter);
             return elem;
+        }"""
+        return js
+    
+    def generate_key_js(self):
+        js = """
+        // key handler for page
+        document.onkeyup = function(event) {
+            var button = findButton(event.keyCode);
+            flashButton(button);
+            send_key(event.keyCode);
         }
+        function buttonClick(button) {
+            flashButton(button);
+            send_key(button.id.charCodeAt(0)); // send ASCII code of id
+        }
+
+        function send_key(keyCode) {
+            var d = new Date();
+            var now = d.getTime(); // time in ms
+            var data = {'EventType':'KeyPress','Value':keyCode, 'Timestamp': now};
+            server_post("/nafc/keypress.json", JSON.stringify(data), parse_response)
+        }"""
+        return js
+
+    def generate_ajax_js(self):
+        js = """
+        var continuePolling = true; // global condition variable
 
         function server_post(url, data, callback_func) {
             var request = false;
@@ -334,73 +355,61 @@ class Interface():
             request.send(data);
         }
 
-        function send_key(keyCode) {
-            var d = new Date();
-            var now = d.getTime(); // time in ms
-            var data = {'EventType':'KeyPress','Value':keyCode, 'Timestamp': now};
-            server_post("/nafc/keypress.json", JSON.stringify(data), parse_response)
-        }
-
         function parse_response(request) {
-            var logger = document.getElementById('logid');
-            if (!logger) {
-                console.log("Page log not found");
-                return;
-            }
             if (request !== false) {
                 var result = null;
                 try {
                     var data = JSON.parse(request.responseText);
                     console.log(data);
-                    logger.innerHTML =  data['result'];
                     result = data['result'];
+                    console.log("result:");
+                    console.log(result);
                 } catch (e) {
-                    console.log(e)
-                    logger.innerHTML = "No server connection";
+                    console.log(e);
+                    console.log("No server connection");
                     return;
                 }
 
                 /* Main Event Processing */
                 if (result) {
-                    var events = result["Commands"]
-                    if (!events) {
-                        return;
-                    }
-                    for(var i = 0; i < events.length; i++) {
-                        var event = events[i]
-                        var cmd = event["Command"]
-                        switch (cmd) {
-                            case "quit":
-                                continuePolling = false;
-                                break;
-                            default:
-                                console.log("Undefined command: " + cmd);
-                                break;
+                    var commands = result['Commands']; // check if this is a command request
+                    if (commands) {
+                        for(var i = 0; i < commands.length; i++) {
+                            var entry = commands[i];
+                            var cmd = entry[0];
+                            var val = entry[1];
+                            var id = entry[2];
+                            console.log("Cmd: ");
+                            console.log(cmd);
+                            console.log("val: ");
+                            console.log(val);
+                            console.log("id: ");
+                            console.log(id);
+
+                            switch (cmd) {
+                                case 14: // quit
+                                    console.log("RECEIVED A QUIT COMMAND");
+                                    continuePolling = false;
+                                    break;
+                                default:
+                                    console.log("Undefined command: " + cmd);
+                                    break;
+                            }
                         }
                     }
                 }
 
             } else {
-                logger.innerHTML = "Bad request";
                 console.log("Bad request");
             }
         }
 
-        // key handler for page
-        document.onkeyup = function(event) {
-            var button = findButton(event.keyCode);
-            flashButton(button);
-            send_key(event.keyCode);
-        }
-
         // Poll loop
         // TODO maybe replace this with long polling... this creates a lot of requests
-        var continuePolling = true; // global condition variable
-
         function poll_timeout() {
             var d = new Date();
             var now = d.getTime(); // time in ms
-            var data = {'EventType':"Poll",'Value': 0, 'Timestamp': now};
+            var data = {'EventType':'Poll','Value': 0, 'Timestamp': now};
             server_post("/nafc/poll.json", JSON.stringify(data), parse_response)
             if (continuePolling) {
                 setTimeout(poll_timeout, 5000);
@@ -410,7 +419,19 @@ class Interface():
         setTimeout(poll_timeout,5000);
         """
 
-        return js#bytearray(js,'UTF-8')
+        return js
+
+    def generate_js(self,js_file):
+        if js_file == "button":
+            return self.generate_button_js()
+        elif js_file == "key":
+            return self.generate_key_js()
+        elif js_file == "main":
+            return self.generate_ajax_js()
+        else:
+            print("NONE")
+            return None
+
 
     def redraw(self):
         """Draw entire window
