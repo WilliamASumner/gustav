@@ -41,10 +41,15 @@ def get_resource(path,response_fn,interface):
         output = interface.generate_css().encode()
         return [output]
 
-    elif re.match("/nafc/js/main.js$",path):
+    elif re.match("/nafc/js/.*\.js$",path):
         status='200 OK'
         response_fn(status,[('Content-Type','text/js')])
-        output = interface.generate_js().encode()
+        js_file = re.match("/nafc/js/(.*)\.js",path).group(1)
+        if js_file in ["button", "key", "main"]:
+            output = interface.generate_js(js_file).encode()
+        else:
+            print("Failed to find javascript file: '" + js_file)
+            output = "".encode()
         return [output]
 
     else:

@@ -1,4 +1,5 @@
 import json
+from copy import deepcopy
 import threading
 
 def process_ajax(interface,data_string):
@@ -10,7 +11,7 @@ def process_ajax(interface,data_string):
                     'Value'    : 'KeyCode or Null',
                     'Time'     : 'Timestamp or Null' }
 
-    To Browser:   'result': { 'Commands' : '{
+    To Browser:   'result': { [
                       'Command':
                         0  - show_notify_left
                         1  - show_notify_right
@@ -29,8 +30,9 @@ def process_ajax(interface,data_string):
                         14 - quit',
                      'Value' : 'Hex Color or Text',
                      'IDs' : 'Alternative Name (e.g. A, B, C)
-                   }
+                   ]
                   }
+        E.G.: [ [14,0,0] ] = [ quit ]
     """
 
     response_dict = {}
@@ -44,7 +46,7 @@ def process_ajax(interface,data_string):
             response_dict["result"] = "KeyPressReceived"
 
         elif data["EventType"] == "Poll":
-            response_dict["result"] = interface.cmd_queue.gen_cmdstr()
+            response_dict["result"] = interface.cmd_queue.get_all_cmds()
 
     except Exception as e:
         print("Encountered exception while processing AJAX JSON: " + str(e))
@@ -76,37 +78,32 @@ class CommandQueue:
 
         return ret + "}"
 
+    def gen_cmd(self,cmd,val,idval):
+        return [cmd, val, idval ]
+
     def length(self):
         return len(self.cmd_list)
 
     def push_cmd(self,command):
-        self.mutex.acquire()
-        self.cmd_list.append(command)
-        self.mutex.release()
+        with self.mutex:
+            self.cmd_list.append(command)
 
     def pop_cmd(self):
-        self.mutex.acquire()
-        result = self.cmd_list.pop(0)
-        self.mutex.release()
+        with self.mutex:
+            result = self.cmd_list.pop(0)
 
         return result
 
     def empty(self):
         return len(self.cmd_list) <= 0
 
-    def gen_cmdstr(self):
-        cmds_dict = dict()
-        cmds_dict['Commands'] = []
+    def get_all_cmds(self):
 
-        while len(self.cmd_list) > 0:
-            entry = self.pop_cmd()
-            cmd_dict = dict()
-            cmd_dict['Command'] = entry.cmd
-            cmd_dict['Value'] = entry.value
-            cmd_dict['ID'] = entry.id
-            cmds_dict['Commands'].append(cmd_dict)
+        with self.mutex:
+            cmds = deepcopy(self.cmd_list)
+            self.cmd_list = []
 
-        return json.dumps(cmds_dict)
+        return { 'Commands' : cmds }
 
     def quit(self):
-        return self.push_cmd(Command('quit',0,0))
+        return self.push_cmd(self.gen_cmd(14,0,0))
