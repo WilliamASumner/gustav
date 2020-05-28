@@ -1,6 +1,8 @@
+from __future__ import with_statement
 import re 
 import sys
 
+html_dir = "./"
 nafc_lib = "/var/www/wsgi/"
 if nafc_lib not in sys.path:
     sys.path.insert(0,nafc_lib)
@@ -9,7 +11,14 @@ from ajax import process_ajax
 
 def home_handler(environ,response_fn,interface):
     status='200 OK'
-    output = b'<h1> This is the home page!</h1>'
+
+    try:
+        f = open(html_dir+"index.html","r")
+        output = f.read().encode()
+    except:
+        status = "500 Internal Server Error"
+        output = b"<h1>500 Internal Server Error</h1><h2>Error getting index.html</h2>"
+
     response_fn(status,[('Content-Type','text/html')])
     return [output]
 
@@ -29,7 +38,7 @@ def nafc_handler(environ,response_fn,interface):
 
 def get_resource(path,response_fn,interface):
     print("Getting resource on path: " + "'" + str(path) + "'")
-    if re.match("^/nafc$",path) or re.match("/index.html$",path):
+    if re.match("^[/(nafc) ]?$",path) or re.match("/index.html$",path):
         status='200 OK'
         response_fn(status,[('Content-Type','text/html')])
         output = interface.generate_html().encode()
@@ -65,7 +74,7 @@ def get_content(environ):
     return data_str.decode('utf-8')
 
 default_routes = {
-        re.compile('^[ /]?$'):home_handler,
+        re.compile('^[ /]?$'):nafc_handler,
         re.compile('^/nafc(/[a-z]*)*(.*\..*)*$'):nafc_handler, # /nafc/*
         }
 
