@@ -20,24 +20,28 @@ def nafc_handler(environ,response_fn,interface):
 
     elif environ['REQUEST_METHOD'] == 'POST':  # a message to gustav
         data_str = get_content(environ)
-        response_str = process_ajax(interface,data_str)
-        return [bytearray(response_str,'utf-8')]
+        output = process_ajax(interface,data_str).encode()
+        return [output]
 
 def get_resource(path,response_fn,interface):
     print("Getting resource on path: " + "'" + str(path) + "'")
     if re.match("^/nafc$",path) or re.match("/index.html$",path):
         status='200 OK'
         response_fn(status,[('Content-Type','text/html')])
-        return [interface.generate_html().encode()]
+        output = interface.generate_html().encode()
+        return [output]
 
     elif re.match("^/nafc/css/styles.css$",path):
         status='200 OK'
         response_fn(status,[('Content-Type','text/css')])
-        return [interface.generate_css().encode()]
+        output = interface.generate_css().encode()
+        return [output]
+
     elif re.match("/nafc/js/main.js$",path):
         status='200 OK'
         response_fn(status,[('Content-Type','text/js')])
-        return [interface.generate_js().encode()]
+        output = interface.generate_js().encode()
+        return [output]
 
     else:
         response_fn('404 Not Found',[('Content-Type','text/html')])
@@ -60,7 +64,7 @@ class Application(object):
     def __init__(self,routes):
         self.routes = routes
         self.count = 0
-        self.interface = Interface(alternatives=['A','B','C'])
+        self.interface = Interface(alternatives=['A','B','C']) # TODO connect with script process
 
     def not_found(self,environ,response_fn,interface):
         print("No matching handler for: " + str(environ.get('PATH_INFO')))
