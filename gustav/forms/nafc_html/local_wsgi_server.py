@@ -5,11 +5,12 @@ import webbrowser
 from wsgiref.util import setup_testing_defaults
 from wsgiref.simple_server import make_server
 
-from wsgi_test_script import application
+from wsgi_test_script import application as test_app
 
 class LocalServer:
-    def __init__(self, interface):
+    def __init__(self, interface,app):
         self.interface = interface
+        self.app = app
         self.port = 8003
         self.server = None
         self.server_thread = threading.Thread(target=self.start_server_thread) # start server in background
@@ -27,7 +28,7 @@ class LocalServer:
     def start(self, openBrowser=True):
         while True:
             try:
-                self.server = make_server('',self.port,application)
+                self.server = make_server('',self.port,self.app)
                 break
             except (OSError,SockError):
                 self.port += 1 # port in use
@@ -41,6 +42,6 @@ class LocalServer:
         self.server_thread.start()
 
 if __name__ == "__main__":
-    server = LocalServer(None).start()
+    server = LocalServer(None,test_app).start()
     while True:
         pass
