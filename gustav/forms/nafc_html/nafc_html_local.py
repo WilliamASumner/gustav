@@ -27,6 +27,7 @@ from string import Template
 import threading
 
 from ajax import CommandQueue
+from application import Application
 from local_wsgi_server import LocalServer
 
 class Interface():
@@ -70,7 +71,8 @@ class Interface():
         self.isServingLocal = isServingLocal
 
         if self.isServingLocal:
-            self.local_server = LocalServer(self).start()
+            wsgi_app = Application(interface=self)
+            self.local_server = LocalServer(self,wsgi_app).start()
 
 
     def destroy(self):
@@ -117,19 +119,19 @@ class Interface():
         <head>
             <meta charset="utf-8">
             <title>NAFC</title>
-            <link rel="stylesheet" href="css/styles.css">
+            <link rel="stylesheet" href="/nafc/css/styles.css">
         </head>
         <body>
             <div class="title-bar"> <div class="abs-pos">$titles</div></div>
             $notifies
             <span class="overflow-center">$buttons</span>
             <div class="status-bar">$statuses</div>
-            <script src="js/main.js"></script>
+            <script src="/nafc/js/main.js"></script>
         </body>
         </html>"""
 
         doc = Template(base_html).substitute({"notifies": notifies, "buttons":buttons_centered,"titles":titles,"statuses":statuses})
-        return bytearray(doc,'UTF-8')
+        return doc
 
     def generate_css(self):
         css = """
@@ -250,7 +252,7 @@ class Interface():
             }
         }
         """
-        return bytearray(css,'UTF-8')
+        return css
 
     def generate_js(self):
         js = """
@@ -345,7 +347,7 @@ class Interface():
             var d = new Date();
             var now = d.getTime(); // time in ms
             var data = {'EventType':'KeyPress','Value':keyCode, 'Timestamp': now};
-            server_post("response.json", JSON.stringify(data), parse_response)
+            server_post("/nafc/keypress.json", JSON.stringify(data), parse_response)
         }
 
         function parse_response(request) {
@@ -417,7 +419,7 @@ class Interface():
         setTimeout(poll_timeout,5000);
         """
 
-        return bytearray(js,'UTF-8')
+        return js
 
     def redraw(self):
         """Draw entire window

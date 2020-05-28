@@ -6,7 +6,6 @@ if nafc_lib not in sys.path:
     sys.path.insert(0,nafc_lib)
 
 from ajax import process_ajax
-from nafc_html_remote import Interface
 
 def home_handler(environ,response_fn,interface):
     status='200 OK'
@@ -20,7 +19,12 @@ def nafc_handler(environ,response_fn,interface):
 
     elif environ['REQUEST_METHOD'] == 'POST':  # a message to gustav
         data_str = get_content(environ)
-        output = process_ajax(interface,data_str).encode()
+        output, hadError = process_ajax(interface,data_str)
+        output = output.encode()
+        status = '200 OK'
+        if hadError:
+            status = '500 Internal Server Error'
+        response_fn(status,[('Content-Type','application/json')])
         return [output]
 
 def get_resource(path,response_fn,interface):
@@ -50,21 +54,21 @@ def get_resource(path,response_fn,interface):
 
 def get_content(environ):
     data_str = None
-    if environ['CONTENT_LENGTH'] and environ['CONTENT_LENGTH'] > 0:
-        data_str = wsgi.input.read(int(environ['CONTENT_LENGTH']))
+    if environ['CONTENT_LENGTH'] is not None and int(environ['CONTENT_LENGTH']) > 0:
+            wsgi_input = environ['wsgi.input']
+            data_str = wsgi_input.read(int(environ['CONTENT_LENGTH']))
+    return data_str.decode('utf-8')
 
-    return data_str
-
-routes = {
+default_routes = {
         re.compile('^[ /]?$'):home_handler,
         re.compile('^/nafc(/[a-z]*)*(.*\..*)*$'):nafc_handler, # /nafc/*
         }
 
 class Application(object):
-    def __init__(self,routes):
+    def __init__(self,routes=default_routes,interface=None):
         self.routes = routes
         self.count = 0
-        self.interface = Interface(alternatives=['A','B','C']) # TODO connect with script process
+        self.interface = interface
 
     def not_found(self,environ,response_fn,interface):
         print("No matching handler for: " + str(environ.get('PATH_INFO')))
@@ -73,10 +77,10 @@ class Application(object):
 
     def __call__(self,environ,response_fn):
         handler = self.not_found
-        for key in routes:
+        for key in self.routes:
             if key.match(environ.get('PATH_INFO')):
                 handler = self.routes[key]
 
         return handler(environ,response_fn,self.interface)
 
-application = Application(routes)
+application = Application()
