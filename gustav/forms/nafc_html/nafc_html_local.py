@@ -104,6 +104,8 @@ class Interface():
         for id_val in self.alternatives:
             buttons = Template(buttons.safe_substitute({"insert":button_base_str}))
             buttons = Template(buttons.safe_substitute({"id":id_val}))
+        buttons = buttons.safe_substitute({"insert":''})
+
         buttons_centered = Template('<div class="container"><div class="true-center">$content</div></div>').substitute({"content":buttons})
 
         statuses = """
