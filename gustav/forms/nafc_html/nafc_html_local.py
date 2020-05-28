@@ -104,8 +104,6 @@ class Interface():
         for id_val in self.alternatives:
             buttons = Template(buttons.safe_substitute({"insert":button_base_str}))
             buttons = Template(buttons.safe_substitute({"id":id_val}))
-        buttons = buttons.safe_substitute({"insert":'<div class="center"><p class="log" id="logid"></p></div>'})
-
         buttons_centered = Template('<div class="container"><div class="true-center">$content</div></div>').substitute({"content":buttons})
 
         statuses = """
@@ -367,23 +365,17 @@ class Interface():
         }
 
         function parse_response(request) {
-            var logger = document.getElementById('logid');
-            if (!logger) {
-                console.log("Page log not found");
-                return;
-            }
             if (request !== false) {
                 var result = null;
                 try {
                     var data = JSON.parse(request.responseText);
                     console.log(data);
-                    logger.innerHTML =  data['result'];
                     result = data['result'];
                     console.log("result:");
                     console.log(result);
                 } catch (e) {
                     console.log(e);
-                    logger.innerHTML = "No server connection";
+                    console.log("No server connection");
                     return;
                 }
 
@@ -417,14 +409,12 @@ class Interface():
                 }
 
             } else {
-                logger.innerHTML = "Bad request";
                 console.log("Bad request");
             }
         }
 
         // Poll loop
         // TODO maybe replace this with long polling... this creates a lot of requests
-
         function poll_timeout() {
             var d = new Date();
             var now = d.getTime(); // time in ms
