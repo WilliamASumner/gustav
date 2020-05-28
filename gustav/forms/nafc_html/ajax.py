@@ -2,6 +2,108 @@ import json
 from copy import deepcopy
 import threading
 
+def generate_client_ajax_js():
+    js = """
+    var continuePolling = true; // global condition variable
+
+    function server_post(url, data, callback_func) {
+        var request = false;
+        try {
+            // Firefox, Opera 8.0+, Safari
+            request = new XMLHttpRequest();
+        }
+        catch (e) {
+            // Internet Explorer
+            try {
+                request = new ActiveXObject("Msxml2.XMLHTTP");
+            }
+            catch (e) {
+                try {
+                    request = new ActiveXObject("Microsoft.XMLHTTP");
+                }
+                catch (e) {
+                    alert("Your browser does not support AJAX!");
+                    return false;
+                }
+            }
+        }
+        request.open("POST", url, true);
+        request.onreadystatechange = function() {
+            if (request.readyState == 4) {
+                callback_func(request);
+            }
+        }
+        request.overrideMimeType("application/json");
+        request.send(data);
+    }
+
+    function parse_response(request) {
+        if (request !== false) {
+            var result = null;
+            try {
+                var data = JSON.parse(request.responseText);
+                console.log(data);
+                result = data['result'];
+                console.log("result:");
+                console.log(result);
+            } catch (e) {
+                console.log(e);
+                console.log("No server connection");
+                return;
+            }
+
+            /* Main Event Processing */
+            if (result) {
+                var commands = result['Commands']; // check if this is a command request
+                if (commands) {
+                    for(var i = 0; i < commands.length; i++) {
+                        var entry = commands[i];
+                        var cmd = entry[0];
+                        var val = entry[1];
+                        var id = entry[2];
+                        console.log("Cmd: ");
+                        console.log(cmd);
+                        console.log("val: ");
+                        console.log(val);
+                        console.log("id: ");
+                        console.log(id);
+
+                        switch (cmd) {
+                            case 14: // quit
+                                console.log("RECEIVED A QUIT COMMAND");
+                                continuePolling = false;
+                                break;
+                            default:
+                                console.log("Undefined command: " + cmd);
+                                break;
+                        }
+                    }
+                }
+            }
+
+        } else {
+            console.log("Bad request");
+        }
+    }
+
+    // Poll loop
+    // TODO maybe replace this with long polling... this creates a lot of requests
+    function poll_timeout() {
+        var d = new Date();
+        var now = d.getTime(); // time in ms
+        var data = {'EventType':'Poll','Value': 0, 'Timestamp': now};
+        server_post("/nafc/poll.json", JSON.stringify(data), parse_response)
+        if (continuePolling) {
+            setTimeout(poll_timeout, 5000);
+        }
+    }
+
+    setTimeout(poll_timeout,5000);
+    """
+
+    return js
+
+
 def process_ajax(interface,data_string):
     """ Parse and then respond to AJAX request
 
