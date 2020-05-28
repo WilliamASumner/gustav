@@ -33,24 +33,25 @@ def process_ajax(interface,data_string):
                   }
     """
 
-    response_str = "Error processing client JSON"
+    response_dict = {}
+    response_dict["result"] = "Error"
+    err = False
 
     try:
-        template = '{ "result" : %s }'
         data = json.loads(data_string)
+        if data["EventType"] == "KeyPress":
+            interface.set_key(data["Value"])
+            response_dict["result"] = "KeyPressReceived"
 
-        if data['EventType'] == 'KeyPress':
-            interface.set_key(data['Value'])
-            response_str = template % ('"KeyPressReceived"')
-
-        elif data['EventType'] == 'Poll':
-            response_str = template % interface.cmd_queue.gen_cmdstr()
+        elif data["EventType"] == "Poll":
+            response_dict["result"] = interface.cmd_queue.gen_cmdstr()
 
     except Exception as e:
         print("Encountered exception while processing AJAX JSON: " + str(e))
+        err = True
 
     finally:
-        return response_str
+        return json.dumps(response_dict), err
 
 
 class Command:
