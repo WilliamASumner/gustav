@@ -338,7 +338,7 @@ class Interface():
             var d = new Date();
             var now = d.getTime(); // time in ms
             var data = {'EventType':'KeyPress','Value':keyCode, 'Timestamp': now};
-            server_post("response.json", JSON.stringify(data), parse_response)
+            server_post("/nafc/keypress.json", JSON.stringify(data), parse_response)
         }
 
         function parse_response(request) {
@@ -400,8 +400,8 @@ class Interface():
         function poll_timeout() {
             var d = new Date();
             var now = d.getTime(); // time in ms
-            var data = {'EventType':'Poll','Value': 0, 'Timestamp': now};
-            server_post("index.html", JSON.stringify(data), parse_response)
+            var data = {'EventType':"Poll",'Value': 0, 'Timestamp': now};
+            server_post("/nafc/poll.json", JSON.stringify(data), parse_response)
             if (continuePolling) {
                 setTimeout(poll_timeout, 5000);
             }
