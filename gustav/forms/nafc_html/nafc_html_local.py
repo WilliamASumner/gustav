@@ -49,7 +49,7 @@ class Interface():
         self.prompt = prompt
 
         self.key_value = 0
-        self.key_mutex = threading.Lock() # mutex for accessing keypress
+        self.interface_mutex = threading.Lock() # mutex for accessing keypress
         self.cmd_queue = CommandQueue()
 
         self.keypress_wait = .005 # Sleep time in sec during keypress loop to avoid cpu race
@@ -70,32 +70,27 @@ class Interface():
         self.button_color_names = ['None', 'Grey', 'Green', 'Red', 'Yellow'] # Allow user to specify color/border by name
         self.button_border_names = ['None', 'Light', 'Heavy', 'Double']      # Must be in same order as button_f_colors 
 
-        self.isServingLocal = isServingLocal
-
-        if self.isServingLocal:
-            wsgi_app = Application(interface=self)
-            self.local_server = LocalServer(self,wsgi_app).start()
+        wsgi_app = Application(interface=self)
+        self.local_server = LocalServer(self,wsgi_app).start()
 
 
     def destroy(self):
         self.cmd_queue.quit()
-
         while not(self.cmd_queue.empty()):
             time.sleep(1) # wait for all commands to be sent
 
         sys.exit(0) # server daemon will be stopped
 
     def generate_html(self):
-
-        titles = """
-            <p id="align-left" class="float-left">
-                Left Title <span id="right-title" class="float-right">Right Title</span>
-            </p>"""
+        titles= """
+            <p class="float-left-col align-left" id="titleleft">Left Title</p>
+            <p class="float-left-col center" id="prompt">Prompt</p>
+            <p class="float-left-col align-right" id="titleright">Right Title</p>"""
 
         notifies = """
-            <div class="notify center notifyright">
+            <div class="notify center notify-right" id="notifyright">
                 <span class="vcenter">Sample Text</span></div>
-                <div class="notify center notifyleft">
+                <div class="notify center notify-left" id="notifyleft">
                     <span class="vcenter">Sample Text</span>
                 </div>
             </div>"""
@@ -108,11 +103,11 @@ class Interface():
             buttons = Template(buttons.safe_substitute({"id":id_val}))
         buttons = buttons.safe_substitute({"insert":''})
 
-        buttons_centered = Template('<div class="container"><div class="true-center">$content</div></div>').substitute({"content":buttons})
+        buttons_centered = Template('<div class="container" id="buttons"><div class="true-center">$content</div></div>').substitute({"content":buttons})
 
         statuses = """
-            <p id="align-left" class="float-left">
-                Left Status <span id="right-status" class="float-right">Right Status</span>
+            <p id="statusleft" class="align-left">
+                Left Status <span id="statusright" class="float-right">Right Status</span>
             </p>"""
 
         base_html = """
@@ -130,6 +125,7 @@ class Interface():
             <div class="status-bar">$statuses</div>
             <script src="/nafc/js/button.js"></script>
             <script src="/nafc/js/key.js"></script>
+            <script src="/nafc/js/i_event.js"></script>
             <script src="/nafc/js/main.js"></script>
         </body>
         </html>"""
@@ -146,6 +142,12 @@ class Interface():
         .center {
             text-align: center;
             vertical-align: center;
+        }
+        .float-left {
+            float: left;
+        }
+        .float-left-col {
+            float: left; width: 33%;
         }
         .log {
             display:none;
@@ -184,12 +186,12 @@ class Interface():
             padding: 20 20 px;
             border-radius:10px;
         }
-        .notifyright {
+        .notify-right {
             background-color: green;
             color: white;
             float: right;
         }
-        .notifyleft {
+        .notify-left {
             background-color: red;
             color: white;
             float: left;
@@ -207,6 +209,9 @@ class Interface():
         }
         .align-left {
             text-align:left;
+        }
+        .align-right {
+            text-align: right;
         }
         .status-bar {
             bottom: 1em;
@@ -340,6 +345,8 @@ class Interface():
             return self.generate_key_js()
         elif js_file == "main":
             return ajax.generate_client_ajax_js()
+        elif js_file == "i_event":
+            return ajax.generate_event_js()
         else:
             print("NONE")
             return None
@@ -375,22 +382,22 @@ class Interface():
     def set_key(self,keyCode):
         """ Save keypress from browser
         """
-        self.key_mutex.acquire()
+        self.interface_mutex.acquire()
 
         try:
             self.key_value = keyCode
 
         finally: # just to be safe
-            self.key_mutex.release()
+            self.interface_mutex.release()
             return
 
     def get_key(self):
         """ Retrieve keypress
         """
-        self.key_mutex.acquire()
+        self.interface_mutex.acquire()
         result = self.key_value
         self.key_value = 0
-        self.key_mutex.release()
+        self.interface_mutex.release()
 
         if result == 0:
             return None
@@ -498,14 +505,16 @@ class Interface():
 
             redraw is a bool specifying whether to redraw window. 
             A window redraw can also be set with update.
-        """        
-        if show is not None:
-            self.notify_l_show = show
-        else:
-            self.notify_l_show = not self.notify_l_show
+        """
 
-        if redraw: 
-            self.redraw()
+        if show is not None:
+            with self.interface_mutex:
+                self.notify_l_show = show
+        else:
+            with self.interface_mutex:
+                self.notify_l_show = not self.notify_l_show
+
+        self.cmd_queue.show_elem(self.notify_l_show,"notifyleft")
 
     def show_Notify_Right(self, show=None, redraw=True):
         """Show the right notify text
@@ -523,6 +532,8 @@ class Interface():
 
         if redraw: 
             self.redraw()
+
+        self.cmd_queue.show_elem(self.notify_r_show,"notifyright")
 
     def update_Status_Left(self, s, redraw=False):
         """Update the text on the left side of the status bar
@@ -699,6 +710,7 @@ class Interface():
             self.prompt_show = not self.prompt_show
             if redraw: 
                 self.redraw()
+        self.cmd_queue.show_elem(show,"prompt")
 
     # High precision timer stuff:
     if (os.name=='nt'): #for Windows:

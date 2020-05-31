@@ -2,6 +2,18 @@ import json
 from copy import deepcopy
 import threading
 
+def generate_event_js():
+    js="""
+    function show_elem(id,show) {
+        show_notify_left.elem = document.getElementById(id);
+        if (show) {
+                elem.style.opacity = 1.0;
+        } else {
+                elem.style.opacity = 0.0;
+        }
+    }"""
+    return js
+
 def generate_client_ajax_js():
     js = """
     var continuePolling = true; // global condition variable
@@ -44,8 +56,6 @@ def generate_client_ajax_js():
                 var data = JSON.parse(request.responseText);
                 console.log(data);
                 result = data['result'];
-                console.log("result:");
-                console.log(result);
             } catch (e) {
                 console.log(e);
                 console.log("No server connection");
@@ -63,12 +73,13 @@ def generate_client_ajax_js():
                         var id = entry[2];
                         console.log("Cmd: ");
                         console.log(cmd);
-                        console.log("val: ");
-                        console.log(val);
-                        console.log("id: ");
-                        console.log(id);
 
                         switch (cmd) {
+                            case 0: // show notify left
+                            case 11:
+                                console.log("Showing prompt");
+                                show_elem(id,val);
+                                break;
                             case 14: // quit
                                 console.log("RECEIVED A QUIT COMMAND");
                                 continuePolling = false;
@@ -94,11 +105,11 @@ def generate_client_ajax_js():
         var data = {'EventType':'Poll','Value': 0, 'Timestamp': now};
         server_post("/nafc/poll.json", JSON.stringify(data), parse_response)
         if (continuePolling) {
-            setTimeout(poll_timeout, 5000);
+            setTimeout(poll_timeout, 500);
         }
     }
 
-    setTimeout(poll_timeout,5000);
+    setTimeout(poll_timeout,500);
     """
 
     return js
@@ -115,26 +126,16 @@ def process_ajax(interface,data_string):
 
     To Browser:   'result': { [
                       'Command':
-                        0  - show_notify_left
-                        1  - show_notify_right
-                        2  - update_notify_left
-                        3  - update_notify_right
-                        4  - update_status_left
-                        5  - update_status_right
-                        6  - update_status_center
-                        7  - update_title_left
-                        8  - update_title_right
-                        9  - update_title_center
-                        10 - show_buttons
-                        11 - show_prompt
-                        12 - set_border
-                        13 - set_color
-                        14 - quit',
-                     'Value' : 'Hex Color or Text',
+                        0  - show_elem
+                        1  - update_elem
+                        2 - set_border
+                        3 - set_color
+                        4 - quit',
+                     'Value' : 'Boolean or Hex Color or Text',
                      'IDs' : 'Alternative Name (e.g. A, B, C)
                    ]
                   }
-        E.G.: [ [14,0,0] ] = [ quit ]
+        E.G.: [ [4,0,0] ] = [ quit ]
     """
 
     response_dict = {}
@@ -156,17 +157,6 @@ def process_ajax(interface,data_string):
 
     finally:
         return json.dumps(response_dict), err
-
-
-class Command:
-    def __init__(self,c,val,idval):
-        self.cmd = c
-        self.value = val
-        self.id = idval
-
-    def __str__(self):
-        return "Command: %s %s %s" % (self.cmd,self.value,self.id)
-
 
 class CommandQueue:
     def __init__(self):
@@ -193,14 +183,12 @@ class CommandQueue:
     def pop_cmd(self):
         with self.mutex:
             result = self.cmd_list.pop(0)
-
         return result
 
     def empty(self):
         return len(self.cmd_list) <= 0
 
     def get_all_cmds(self):
-
         with self.mutex:
             cmds = deepcopy(self.cmd_list)
             self.cmd_list = []
@@ -208,4 +196,10 @@ class CommandQueue:
         return { 'Commands' : cmds }
 
     def quit(self):
-        return self.push_cmd(self.gen_cmd(14,0,0))
+        return self.push_cmd(self.gen_cmd(4,0,0))
+
+    def show_elem(self,show,elid):
+        return self.push_cmd(self.gen_cmd(0,show,elid))
+
+    def update_elem(self,s,elid):
+        return self.push_cmd(self.gen_cmd(1,s,elid))

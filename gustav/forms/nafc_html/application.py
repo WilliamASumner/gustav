@@ -1,20 +1,19 @@
 from __future__ import with_statement
 import re 
 import sys
+from ajax import process_ajax
 
 html_dir = "./"
 nafc_lib = "/var/www/wsgi/"
 if nafc_lib not in sys.path:
     sys.path.insert(0,nafc_lib)
 
-from ajax import process_ajax
-
 def home_handler(environ,response_fn,interface):
     status='200 OK'
-
     try:
         f = open(html_dir+"index.html","r")
         output = f.read().encode()
+
     except:
         status = "500 Internal Server Error"
         output = b"<h1>500 Internal Server Error</h1><h2>Error getting index.html</h2>"
@@ -31,8 +30,10 @@ def nafc_handler(environ,response_fn,interface):
         output, hadError = process_ajax(interface,data_str)
         output = output.encode()
         status = '200 OK'
+
         if hadError:
             status = '500 Internal Server Error'
+
         response_fn(status,[('Content-Type','application/json')])
         return [output]
 
@@ -52,13 +53,16 @@ def get_resource(path,response_fn,interface):
 
     elif re.match("/nafc/js/.*\.js$",path):
         status='200 OK'
-        response_fn(status,[('Content-Type','text/js')])
+        response_fn(status,[('Content-Type','application/javascript')])
         js_file = re.match("/nafc/js/(.*)\.js",path).group(1)
-        if js_file in ["button", "key", "main"]:
+
+        if js_file in ["button", "key", "main", "i_event"]:
             output = interface.generate_js(js_file).encode()
+
         else:
             print("Failed to find javascript file: '" + js_file)
             output = "".encode()
+
         return [output]
 
     else:
@@ -71,6 +75,7 @@ def get_content(environ):
     if environ['CONTENT_LENGTH'] is not None and int(environ['CONTENT_LENGTH']) > 0:
             wsgi_input = environ['wsgi.input']
             data_str = wsgi_input.read(int(environ['CONTENT_LENGTH']))
+
     return data_str.decode('utf-8')
 
 default_routes = {
