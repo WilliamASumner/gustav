@@ -5,7 +5,8 @@ import threading
 def generate_event_js():
     js="""
     function show_elem(id,show) {
-        show_notify_left.elem = document.getElementById(id);
+        show_elem.elem = document.getElementById(id);
+        elem = show_elem.elem;
         if (show) {
                 elem.style.opacity = 1.0;
         } else {
@@ -105,11 +106,11 @@ def generate_client_ajax_js():
         var data = {'EventType':'Poll','Value': 0, 'Timestamp': now};
         server_post("/nafc/poll.json", JSON.stringify(data), parse_response)
         if (continuePolling) {
-            setTimeout(poll_timeout, 500);
+            setTimeout(poll_timeout, 50);
         }
     }
 
-    setTimeout(poll_timeout,500);
+    setTimeout(poll_timeout,10);
     """
 
     return js
