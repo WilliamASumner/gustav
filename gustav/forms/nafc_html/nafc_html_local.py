@@ -88,9 +88,9 @@ class Interface():
             <p class="float-left-col align-right" id="titleright">Right Title</p>"""
 
         notifies = """
-            <div class="notify center notify-right" id="notifyright">
+            <div class="notify center notify-right" id="notifyleft">
                 <span class="vcenter">Sample Text</span></div>
-                <div class="notify center notify-left" id="notifyleft">
+                <div class="notify center notify-left" id="notifyright">
                     <span class="vcenter">Sample Text</span>
                 </div>
             </div>"""
@@ -693,6 +693,7 @@ class Interface():
             self.buttons_show = not self.buttons_show
             if redraw: 
                 self.redraw()
+        self.cmd_queue.show_elem(self.buttons_show,"buttons")
 
     def show_Prompt(self, show=None, redraw=True):
         """Show the prompt
@@ -710,7 +711,7 @@ class Interface():
             self.prompt_show = not self.prompt_show
             if redraw: 
                 self.redraw()
-        self.cmd_queue.show_elem(show,"prompt")
+        self.cmd_queue.show_elem(self.prompt_show,"prompt")
 
     # High precision timer stuff:
     if (os.name=='nt'): #for Windows:
