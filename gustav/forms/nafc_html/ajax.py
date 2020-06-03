@@ -54,6 +54,10 @@ def generate_client_ajax_js():
         if (request !== false) {
             var result = null;
             try {
+                if (request.responseText.length == 0) { // no response
+                    continuePolling = false;
+                    return;
+                }
                 var data = JSON.parse(request.responseText);
                 console.log(data);
                 result = data['result'];
