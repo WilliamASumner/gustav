@@ -46,9 +46,36 @@ def generate_event_js():
     }"""
     return js
 
+def generate_key_js():
+        js = """
+        // key handler for page
+        document.onkeyup = function(event) {
+            var button = findButton(event.keyCode);
+            flashButton(button);
+            send_key(event.keyCode);
+        }
+        function buttonClick(button) {
+            flashButton(button);
+            send_key(button.id.charCodeAt(0)); // send ASCII code of id
+        }
+
+        function send_key(keyCode) {
+            var d = new Date();
+            var now = d.getTime(); // time in ms
+            var data = {'EventType':'KeyPress','Value':keyCode, 'Timestamp': now};
+            server_post("/nafc/keypress.json", JSON.stringify(data), parse_response)
+            if (clearTimeout !== null && clearTimeout !== undefined) {
+                currentDelay = 0;
+                console.log("KEYPRESS RESET");
+            }
+        }"""
+        return js
+
+
 def generate_client_ajax_js():
     js = """
     var continuePolling = true; // global condition variable
+    var currentDelay = 0;
 
     function get_request() {
         var request = false;
@@ -92,6 +119,7 @@ def generate_client_ajax_js():
     function make_run_func(func,id,val) {
         return function () {
             func(id,val);
+            clearTimeout = true;
         }
     }
 
@@ -113,7 +141,7 @@ def generate_client_ajax_js():
 
             /* Main Event Processing */
             if (result) {
-                this.currentDelay = this.currentDelay || 0;
+                currentDelay = currentDelay || 0;
                 var commands = result['Commands']; // check if this is a command request
                 if (commands) {
                     for(var i = 0; i < commands.length; i++) {
@@ -136,7 +164,7 @@ def generate_client_ajax_js():
                                 func_to_run = set_button_colors
                                 break;
                             case 4: // wait_ms
-                                this.currentDelay += val;
+                                currentDelay += val;
                                 func_to_run = undefined;
                                 break;
                             case 5: // quit
@@ -153,9 +181,13 @@ def generate_client_ajax_js():
                         if (func_to_run === null || func_to_run === undefined) {
                             continue;
                         } else {
-                            if (this.currentDelay != 0 ) {
-                                setTimeout(make_run_func(func_to_run,id,val),this.currentDelay);
-                                this.currentDelay = 0;
+                            if (currentDelay != 0 ) {
+                                clearTimeout = false;
+                                setTimeout(make_run_func(func_to_run,id,val),currentDelay);
+                                if (clearTimeout) {
+                                    console.log("CLEARING TIMEOUT");
+                                    currentDelay = 0;
+                                }
                             } else {
                                 func_to_run(id,val);
                             }
