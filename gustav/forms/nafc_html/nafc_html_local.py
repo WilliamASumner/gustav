@@ -82,18 +82,28 @@ class Interface():
         sys.exit(0) # server daemon will be stopped
 
     def generate_html(self):
-        titles= """
-            <p class="float-left-col align-left" id="titleleft">Left Title</p>
-            <p class="float-left-col center" id="prompt">Prompt</p>
-            <p class="float-left-col align-right" id="titleright">Right Title</p>"""
+        vardict = {"l_title":self.title_l_str,
+                     "c_title":self.title_c_str,
+                     "r_title":self.title_r_str,
+                     "l_status":self.status_l_str,
+                     "c_status":self.status_c_str,
+                     "r_status":self.status_r_str,
+                     "l_notify":self.notify_l_str,
+                     "r_notify":self.notify_r_str,
+                     "prompt":self.prompt
+                     }
+        titles= Template("""
+            <p class="float-left-col align-left" id="titleleft">$l_title</p>
+            <p class="float-left-col center" id="titlecenter">$c_title</p>
+            <p class="float-left-col align-right" id="titleright">$r_title</p>""").safe_substitute(vardict)
 
-        notifies = """
-            <div class="notify center notify-right" id="notifyleft">
-                <span class="vcenter">Sample Text</span></div>
-                <div class="notify center notify-left" id="notifyright">
-                    <span class="vcenter">Sample Text</span>
+        notifies = Template("""
+            <div class="notify center notify-left" id="notifyleft">
+                <span class="vcenter">$r_notify</span></div>
+                <div class="notify center notify-right" id="notifyright">
+                    <span class="vcenter">$l_notify</span>
                 </div>
-            </div>"""
+            </div>""").safe_substitute(vardict)
 
         button_base_str = '<input class="button" id="$id" type="button" value="$id" onClick="buttonClick(this)"/>\n$insert'
         button_base_tmp = Template(button_base_str)
@@ -103,12 +113,14 @@ class Interface():
             buttons = Template(buttons.safe_substitute({"id":id_val}))
         buttons = buttons.safe_substitute({"insert":''})
 
-        buttons_centered = Template('<div class="container" id="buttons"><div class="true-center">$content</div></div>').substitute({"content":buttons})
+        prompt_div = Template('<div class="prompt-text true-center" id="prompt">$prompt</div>').safe_substitute(vardict)
+        buttons_centered = Template('<div class="container"> $prompt_div <div class="true-center" id="buttons">$content</div></div>').substitute({"content":buttons,"prompt_div":prompt_div})
 
-        statuses = """
-            <p id="statusleft" class="align-left">
-                Left Status <span id="statusright" class="float-right">Right Status</span>
-            </p>"""
+        statuses = Template("""
+            <p class="align-left">
+                <span id="statusleft">$l_status</span>
+                <span id="statusright" class="float-right">$r_status</span>
+            </p>""").safe_substitute(vardict)
 
         base_html = """
         <!DOCTYPE html>
@@ -123,6 +135,7 @@ class Interface():
             $notifies
             <span class="overflow-center">$buttons</span>
             <div class="status-bar">$statuses</div>
+
             <script src="/nafc/js/button.js"></script>
             <script src="/nafc/js/key.js"></script>
             <script src="/nafc/js/i_event.js"></script>
@@ -445,6 +458,7 @@ class Interface():
         self.title_l_str = s
         if redraw: 
             self.redraw()
+        self.cmd_queue.update_elem(s,"titleleft");
 
     def update_Title_Center(self, s, redraw=False):
         """Update the text in the center of the title bar
@@ -455,6 +469,7 @@ class Interface():
         self.title_c_str = s
         if redraw: 
             self.redraw()
+        self.cmd_queue.update_elem(s,"titlecenter");
 
     def update_Title_Right(self, s, redraw=False):
         """Update the text on the right side of the title bar
@@ -465,6 +480,7 @@ class Interface():
         self.title_r_str = s
         if redraw: 
             self.redraw()
+        self.cmd_queue.update_elem(s,"titleright");
 
     def update_Notify_Left(self, s, show=None, redraw=False):
         """Update the notify text to the left of the face.
@@ -481,6 +497,7 @@ class Interface():
             self.notify_l_show = show
         if redraw: 
             self.redraw()
+        self.cmd_queue.update_elem(s,"notifyleft");
 
     def update_Notify_Right(self, s, show=None, redraw=False):
         """Update the notify text to the left of the face.
@@ -497,6 +514,7 @@ class Interface():
             self.notify_r_show = show
         if redraw: 
             self.redraw()
+        self.cmd_queue.update_elem(s,"notifyright");
 
     def show_Notify_Left(self, show=None, redraw=True):
         """Show the left notify text
@@ -544,6 +562,7 @@ class Interface():
         self.status_l_str = s
         if redraw: 
             self.redraw()
+        self.cmd_queue.update_elem(s,"statusleft");
 
     def update_Status_Center(self, s, redraw=False):
         """Update the text in the center of the status bar
@@ -554,6 +573,7 @@ class Interface():
         self.status_c_str = s
         if redraw: 
             self.redraw()
+        self.cmd_queue.update_elem(s,"statuscenter");
 
     def update_Status_Right(self, s, redraw=False):
         """Update the text on the right side of the status bar
@@ -564,6 +584,7 @@ class Interface():
         self.status_r_str = s
         if redraw: 
             self.redraw()
+        self.cmd_queue.update_elem(s,"statusright");
 
     def update(self):
         self.redraw()
@@ -581,6 +602,7 @@ class Interface():
 
         if redraw: 
             self.redraw()
+        self.cmd_queue.update_elem(self.prompt,"prompt");
 
     def set_color(self, button, color, redraw=True):
         """Sets the face color of the specified button
@@ -606,22 +628,24 @@ class Interface():
                     buttons.append(self.alternatives.index(b))
 
         if isinstance(color, int):
-            colos = [color]
+            colors = [self.button_colors[color]]
         elif isinstance(color, str):
-            colors = [self.button_color_names.index(color)]
+            colors = [color]
         else:
             colors = []
             for c in color:
                 if isinstance(c, int):
-                    colors.append(c)
+                    colors.append(self.button_colors_names[c])
                 else:
-                    colors.append(self.button_color_names.index(c))
+                    colors.append(c)
 
         for b,c in zip(buttons,colors):
             self.button_colors[b] = c
 
         if redraw:
             self.redraw()
+
+        self.cmd_queue.set_color(self.button_colors)
 
     def set_border(self, button, border, redraw=True):
         """Sets the border of the specified button
@@ -651,7 +675,7 @@ class Interface():
                 if isinstance(b, int):
                     buttons.append(b)
                 else:
-                    buttons.append(self.alternatives.index(b))
+                    buttons.append(self.alternatives.index(button))
 
         if isinstance(border, int):
             borders = [border]
@@ -670,6 +694,8 @@ class Interface():
 
         if redraw:
             self.redraw()
+
+        self.cmd_queue.set_border(self.button_borders)
 
     def get_button_colors(self):
         return self.button_color_names
@@ -796,6 +822,7 @@ class Interface():
     # If you don't need the precision or you need longer wait times, consider using time.sleep(s)
     def wait_ms(self, delay_ms):
         "Wait (block) for delay_ms milliseconds (ms) using a high-precision timer"
+        self.cmd_queue.wait_ms(delay_ms)
         t_start = self.timestamp_ms()
         while (self.timestamp_ms() - t_start < delay_ms):
             pass #do nothing 
@@ -812,7 +839,7 @@ if __name__ == "__main__":
     # Initialize interface
     # Alternatives can be a number, in which case labels will be "1", "2" etc., or
     # a list where len = # of alternatives, and each item is a single unique char
-    alternatives = ['A', 'B','C','D','E','F']
+    alternatives = ['A','B']
     interface = Interface(alternatives=alternatives)
     # Add some text
     interface.show_Prompt(False)
