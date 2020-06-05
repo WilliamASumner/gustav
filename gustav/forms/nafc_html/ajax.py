@@ -43,7 +43,7 @@ def generate_event_js():
             }
             buttons[i].style.backgroundColor = colors[i];
         }
-    } """
+    }"""
     return js
 
 def generate_client_ajax_js():
@@ -73,6 +73,7 @@ def generate_client_ajax_js():
             }
         return request;
     }
+
     function server_post(url, data, callback_func) {
         var request = get_request();
         if (!request) {
@@ -148,6 +149,7 @@ def generate_client_ajax_js():
                                 func_to_run = undefined;
                                 break;
                         }
+
                         if (func_to_run === null || func_to_run === undefined) {
                             continue;
                         } else {
