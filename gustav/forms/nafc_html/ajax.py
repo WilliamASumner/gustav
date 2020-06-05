@@ -27,7 +27,7 @@ def generate_event_js():
         // Borders are 0-None 1- Light 2-Heavy 3-Double
         var border_widths = ['0px','5px','5px','3px'];
         var border_style = ['none','solid','solid','double'];
-        var border_color = ['grey','grey','black','black'];
+        var border_color = ['#277650','#277650','black','black'];
         for (var i = 0; i < num_buttons; i++) {
             var choice = borders[i];
             buttons[i].style.border = border_widths[choice] + " " + border_style[choice] + " " + border_color[choice];
