@@ -97,12 +97,12 @@ class Interface():
             <p class="float-left-col center" id="titlecenter">$c_title</p>
             <p class="float-left-col align-right" id="titleright">$r_title</p>""").safe_substitute(vardict)
 
+        #prompt_div = Template('<div class="prompt-text true-center" id="prompt">$prompt</div>').safe_substitute(vardict)
+        #vardict['prompt'] = prompt_div
         notifies = Template("""
-            <div class="notify center notify-left" id="notifyleft">
-                <span class="vcenter">$r_notify</span></div>
-                <div class="notify center notify-right" id="notifyright">
-                    <span class="vcenter">$l_notify</span>
-                </div>
+            <div class="container">
+                <p class="float-left-col notify center" id="notifyleft">$l_notify</p>
+                <p class="float-left-col notify center" id="notifyright">$r_notify</p>
             </div>""").safe_substitute(vardict)
 
         button_base_str = '<input class="button" id="$id" type="button" value="$id" onClick="buttonClick(this)"/>\n$insert'
@@ -113,8 +113,8 @@ class Interface():
             buttons = Template(buttons.safe_substitute({"id":id_val}))
         buttons = buttons.safe_substitute({"insert":''})
 
-        prompt_div = Template('<div class="prompt-text true-center" id="prompt">$prompt</div>').safe_substitute(vardict)
-        buttons_centered = Template('<div class="container"> $prompt_div <div class="true-center" id="buttons">$content</div></div>').substitute({"content":buttons,"prompt_div":prompt_div})
+        prompt_el = Template('<p class="center prompt-text" id="prompt">Choose an alternative</p>\n').safe_substitute(vardict)
+        buttons_centered = Template('<div class="container"> <div class="true-center" id="buttons">$prompt$buttons</div></div>').substitute({"buttons":buttons,"prompt":prompt_el})
 
         statuses = Template("""
             <p class="align-left">
@@ -131,7 +131,7 @@ class Interface():
             <link rel="stylesheet" href="/nafc/css/styles.css">
         </head>
         <body>
-            <div class="title-bar"> <div class="abs-pos">$titles</div></div>
+            <div class="title-bar"> <div class="abs-pos-top">$titles</div></div>
             $notifies
             <span class="overflow-center">$buttons</span>
             <div class="status-bar">$statuses</div>
@@ -199,13 +199,13 @@ class Interface():
             padding: 20 20 px;
             border-radius:10px;
         }
-        .notify-right {
-            background-color: green;
+        #notifyright {
+            background-color: red;
             color: white;
             float: right;
         }
-        .notify-left {
-            background-color: red;
+        #notifyleft {
+            background-color: green;
             color: white;
             float: left;
         }
@@ -233,12 +233,15 @@ class Interface():
             height: 2em;
             font-size: 2em;
         }
+        .prompt-text{
+            font-size:2em;
+        }
         .title-bar {
             width: 100%;
             height: 2em;
             font-size:2em;
         }
-        .abs-pos {
+        .abs-pos-top {
             width: 99%;
             top: 0;
             position:absolute;
@@ -498,6 +501,7 @@ class Interface():
         if redraw: 
             self.redraw()
         self.cmd_queue.update_elem(s,"notifyleft");
+        self.cmd_queue.show_elem(self.notify_l_show,"notifyleft");
 
     def update_Notify_Right(self, s, show=None, redraw=False):
         """Update the notify text to the left of the face.
@@ -515,6 +519,7 @@ class Interface():
         if redraw: 
             self.redraw()
         self.cmd_queue.update_elem(s,"notifyright");
+        self.cmd_queue.show_elem(self.notify_r_show,"notifyright");
 
     def show_Notify_Left(self, show=None, redraw=True):
         """Show the left notify text
