@@ -5,8 +5,9 @@ import threading
 def generate_event_js():
     js="""
     function show_elem(id,show) {
-        show_elem.elem = document.getElementById(id);
-        elem = show_elem.elem;
+        console.log("Showing id: "+ id);
+        this.elem = document.getElementById(id);
+        elem = this.elem;
         if (show) {
                 elem.style.opacity = 1.0;
         } else {
@@ -20,19 +21,7 @@ def generate_event_js():
         elem.innerHTML = str;
     }
 
-    // generally bad practice, but here we want to preserve 
-    // the interface to the python scripts, so we need a synchronous wait
-    // the alternative is using setTimeout with more complex cmd parsing
-    // that waits for the next cmd and wraps it in a setTimeout
-    function wait_ms(delay) {
-        var startTime = new Date().getTime();
-        var now = startTime;
-        while (now - startTime < delay) {
-            now = new Date().getTime();
-        }
-    }
-    
-    function set_button_borders(borders) {
+    function set_button_borders(_id,borders) {
         var buttons = document.getElementsByClassName("button");
         var num_buttons = buttons.length;
         // Borders are 0-None 1- Light 2-Heavy 3-Double
@@ -44,7 +33,7 @@ def generate_event_js():
         }
     }
 
-    function set_button_colors(colors) {
+    function set_button_colors(_id,colors) {
         var buttons = document.getElementsByClassName("button");
         var num_buttons = buttons.length;
         for (var i = 0; i < num_buttons; i++) {
@@ -88,6 +77,12 @@ def generate_client_ajax_js():
         request.send(data);
     }
 
+    function make_run_func(func,id,val) {
+        return function () {
+            func(id,val);
+        }
+    }
+
     function parse_response(request) {
         if (request !== false) {
             var result = null;
@@ -106,6 +101,7 @@ def generate_client_ajax_js():
 
             /* Main Event Processing */
             if (result) {
+                this.currentDelay = this.currentDelay || 0;
                 var commands = result['Commands']; // check if this is a command request
                 if (commands) {
                     for(var i = 0; i < commands.length; i++) {
@@ -113,24 +109,23 @@ def generate_client_ajax_js():
                         var cmd = entry[0];
                         var val = entry[1];
                         var id = entry[2];
+                        var func_to_run;
                         switch (cmd) {
                             case 0: // show
-                                console.log(commands);
-                                console.log("Showing " + id + " with " + val);
-                                show_elem(id,val);
+                                func_to_run = show_elem;
                                 break;
                             case 1: // update
-                                update_elem(id,val);
+                                func_to_run = update_elem;
                                 break;
                             case 2: // set border
-                                console.log("SETTING BORDER: " + val);
-                                set_button_borders(val);
+                                func_to_run = set_button_borders;
                                 break;
                             case 3: // set color
-                                set_button_colors(val);
+                                func_to_run = set_button_colors
                                 break;
                             case 4: // wait_ms
-                                wait_ms(val);
+                                this.currentDelay += val;
+                                func_to_run = undefined;
                                 break;
                             case 5: // quit
                                 console.log("RECEIVED A QUIT COMMAND");
@@ -139,7 +134,18 @@ def generate_client_ajax_js():
                             default:
                                 console.log("Undefined command: " + cmd);
                                 continuePolling = false;
+                                func_to_run = undefined;
                                 break;
+                        }
+                        if (func_to_run === null || func_to_run === undefined) {
+                            continue;
+                        } else {
+                            if (this.currentDelay != 0 ) {
+                                setTimeout(make_run_func(func_to_run,id,val),this.currentDelay);
+                                this.currentDelay = 0;
+                            } else {
+                                func_to_run(id,val);
+                            }
                         }
                     }
                 }
