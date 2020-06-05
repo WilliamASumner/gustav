@@ -114,7 +114,7 @@ class Interface():
         buttons = buttons.safe_substitute({"insert":''})
 
         prompt_el = Template('<p class="center prompt-text" id="prompt">Choose an alternative</p>\n').safe_substitute(vardict)
-        buttons_centered = Template('<div class="container"> <div class="true-center" id="buttons">$prompt$buttons</div></div>').substitute({"buttons":buttons,"prompt":prompt_el})
+        buttons_centered = Template('<div class="container"> <div class="true-center">$prompt<div id="buttons">$buttons</div></div></div>').substitute({"buttons":buttons,"prompt":prompt_el})
 
         statuses = Template("""
             <p class="align-left">
