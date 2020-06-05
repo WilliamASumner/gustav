@@ -25,11 +25,12 @@ def generate_event_js():
         var buttons = document.getElementsByClassName("button");
         var num_buttons = buttons.length;
         // Borders are 0-None 1- Light 2-Heavy 3-Double
-        var border_widths = ['0px','3px','3px','1px'];
+        var border_widths = ['0px','5px','5px','3px'];
         var border_style = ['none','solid','solid','double'];
-        var border_color = ['black','#277650','#227145','#277650'];
+        var border_color = ['grey','grey','black','black'];
         for (var i = 0; i < num_buttons; i++) {
-            buttons[i].style.border = border_widths[borders[i]] + " " +border_style[i] + " " + border_color[i];
+            var choice = borders[i];
+            buttons[i].style.border = border_widths[choice] + " " + border_style[choice] + " " + border_color[choice];
         }
     }
 
@@ -37,6 +38,9 @@ def generate_event_js():
         var buttons = document.getElementsByClassName("button");
         var num_buttons = buttons.length;
         for (var i = 0; i < num_buttons; i++) {
+            if (colors[i] == "Green") {
+                colors[i] = "#277650";
+            }
             buttons[i].style.backgroundColor = colors[i];
         }
     } """
@@ -46,26 +50,33 @@ def generate_client_ajax_js():
     js = """
     var continuePolling = true; // global condition variable
 
-    function server_post(url, data, callback_func) {
+    function get_request() {
         var request = false;
-        try {
-            // Firefox, Opera 8.0+, Safari
-            request = new XMLHttpRequest();
-        }
-        catch (e) {
-            // Internet Explorer
             try {
-                request = new ActiveXObject("Msxml2.XMLHTTP");
+                // Firefox, Opera 8.0+, Safari
+                request = new XMLHttpRequest();
             }
             catch (e) {
+                // Internet Explorer
                 try {
-                    request = new ActiveXObject("Microsoft.XMLHTTP");
+                    request = new ActiveXObject("Msxml2.XMLHTTP");
                 }
                 catch (e) {
-                    alert("Your browser does not support AJAX!");
-                    return false;
+                    try {
+                        request = new ActiveXObject("Microsoft.XMLHTTP");
+                    }
+                    catch (e) {
+                        alert("Your browser does not support AJAX!");
+                        return false;
+                    }
                 }
             }
+        return request;
+    }
+    function server_post(url, data, callback_func) {
+        var request = get_request();
+        if (!request) {
+            return false;
         }
         request.open("POST", url, true);
         request.onreadystatechange = function() {
