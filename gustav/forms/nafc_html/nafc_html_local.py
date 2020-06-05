@@ -333,32 +333,12 @@ class Interface():
         }"""
         return js
     
-    def generate_key_js(self):
-        js = """
-        // key handler for page
-        document.onkeyup = function(event) {
-            var button = findButton(event.keyCode);
-            flashButton(button);
-            send_key(event.keyCode);
-        }
-        function buttonClick(button) {
-            flashButton(button);
-            send_key(button.id.charCodeAt(0)); // send ASCII code of id
-        }
-
-        function send_key(keyCode) {
-            var d = new Date();
-            var now = d.getTime(); // time in ms
-            var data = {'EventType':'KeyPress','Value':keyCode, 'Timestamp': now};
-            server_post("/nafc/keypress.json", JSON.stringify(data), parse_response)
-        }"""
-        return js
-
+    
     def generate_js(self,js_file):
         if js_file ==   "button":
             return self.generate_button_js()
         elif js_file == "key":
-            return self.generate_key_js()
+            return ajax.generate_key_js()
         elif js_file == "main":
             return ajax.generate_client_ajax_js()
         elif js_file == "i_event":
@@ -366,8 +346,6 @@ class Interface():
         else:
             print("NONE")
             return None
-
-
 
     def redraw(self):
         """Draw entire window
