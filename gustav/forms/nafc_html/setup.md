@@ -16,10 +16,8 @@ sudo apt-get install python3-pip
 ```
 
 <del>
-3. Install the mod\_wsgi Apache module:
-```
-~~sudo apt-get install libapache2-mod-wsgi~~
-```
+3. Install the mod\_wsgi Apache module:  
+`sudo apt-get install libapache2-mod-wsgi`
 </del>  
 
 Note: Using the distro-provided version of mod\_wsgi is not recommended. [It should be installed from source instead](https://modwsgi.readthedocs.io/en/develop/installation.html).
@@ -43,10 +41,10 @@ sudo apachectl restart
 ```
 
 4. The URL `http://YOUR_SITE/ALIAS_NAME` should now show the following output: 
-<h1>This is the homepage!</h1>  
+`<h1>This is the homepage!</h1>`  
 
 and the following output for `http://YOUR_SITE/ALIAS_NAME/test`:
-<h1>This is the test page!</h1>
+`<h1>This is the test page!</h1>`  
 
 ## Errors
 If the site returns an *Interal Server Error* or a 404, check the output in `/var/log/apache2/error.log`.  
