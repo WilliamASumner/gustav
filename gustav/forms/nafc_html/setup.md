@@ -1,4 +1,12 @@
-# NAFC HTML
+# NAFC HTML Local
+
+## Usage
+To use the nafc\_html\_local.py, the files `ajax.py local_wsgi_server.py application.py` are required.
+1. To use this in another project, simply install the aforementioned files and add an `import nafc_html` statement in your script.
+2. A browser screen will open up whenever you initialize the `Interface` object.
+3. Running `python nafc_html_local.py` will show an example interface.
+
+# NAFC HTML Server
 ## Credit
 This guide was inspired by [this tutorial](https://tecadmin.net/install-apache-mod-wsgi-on-ubuntu-18-04-bionic/).
 
