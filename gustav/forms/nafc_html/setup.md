@@ -21,6 +21,7 @@ sudo apt-get install python3-pip
 ~~sudo apt-get install libapache2-mod-wsgi~~
 ```
 </del>  
+
 Note: Using the distro-provided version of mod\_wsgi is not recommended. [It should be installed from source instead](https://modwsgi.readthedocs.io/en/develop/installation.html).
 
 4. Restart the apache server for changes to take effect
