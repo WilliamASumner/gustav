@@ -38,7 +38,6 @@ def nafc_handler(environ,response_fn,interface):
         return [output]
 
 def get_resource(path,response_fn,interface):
-    print("Getting resource on path: " + "'" + str(path) + "'")
     if re.match("^[/(nafc) ]?$",path) or re.match("/index.html$",path):
         status='200 OK'
         response_fn(status,[('Content-Type','text/html')])
