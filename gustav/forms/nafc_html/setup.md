@@ -52,13 +52,11 @@ There are a couple common errors:
 ### Incorrect response value type
 ```
 TypeError: sequence of byte string values expected, value of type str found
-```
-*The cause:*
+```  
 This error is sneaky because a python 2.7 installation won't complain about a response function returning a string delimited by quotes (''/""), but python 3 will, because regular strings are no longer a byte string type. To fix this, use either a `b'YOUR\_STRING\_HERE'` in python 3 code, or just stick to `b"YOUR_STRING_HERE"` for interoperability. See `homepage_handler` and `test_handler` in `wsgi_test_script.py`.
 
 ### Missing WSGI application
 ```
 Target WSGI script '/var/www/wsgi/wsgi_test_script.py' does not contain WSGI application 'application'
-```
-*The cause:*
+```  
 In order for mod\_wsgi to properly instantiate the app, it needs to find either a function, class or object with the name 'application' to run. To fix this, make sure you have one of the three in your wsgi script. See `wsgi_test_script.py` for an example.
