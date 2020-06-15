@@ -3,6 +3,10 @@ from copy import deepcopy
 import threading
 
 def generate_event_js():
+    """
+        Generate JS that handles UI events
+    """
+
     js="""
     function show_elem(id,show) {
         console.log("Showing id: "+ id);
@@ -47,6 +51,10 @@ def generate_event_js():
     return js
 
 def generate_key_js():
+        """
+            Generate JS that handles keypresses
+        """
+
         js = """
         // key handler for page
         document.onkeyup = function(event) {
@@ -73,6 +81,10 @@ def generate_key_js():
 
 
 def generate_client_ajax_js():
+    """
+        Generate JS related to AJAX communication
+    """
+
     js = """
     var continuePolling = true; // global condition variable
     var currentDelay = 0;

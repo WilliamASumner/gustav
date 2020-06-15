@@ -75,6 +75,10 @@ class Interface():
 
 
     def destroy(self):
+        """
+            Wait for all commands to be sent then exit
+        """
+
         self.cmd_queue.quit()
         while not(self.cmd_queue.empty()):
             time.sleep(1) # wait for all commands to be sent
@@ -82,6 +86,10 @@ class Interface():
         sys.exit(0) # server daemon will be stopped
 
     def generate_html(self):
+        """
+            Generate an HTML page based on inteface config
+        """
+
         vardict = {"l_title":self.title_l_str,
                      "c_title":self.title_c_str,
                      "r_title":self.title_r_str,
@@ -147,6 +155,9 @@ class Interface():
         return doc
 
     def generate_css(self):
+        """
+            Generate a CSS file
+        """
         css = """
         .container {
             display: block;
@@ -280,6 +291,10 @@ class Interface():
         return css
 
     def generate_button_js(self):
+        """
+            Generate JS file related to button flash effects
+        """
+
         js = """
         function fadeIn(el,duration,callback) {
             var opacity = 0.0;
@@ -335,7 +350,11 @@ class Interface():
     
     
     def generate_js(self,js_file):
-        if js_file ==   "button":
+        """
+            Return a specific js file
+        """
+
+        if js_file == "button":
             return self.generate_button_js()
         elif js_file == "key":
             return ajax.generate_key_js()
