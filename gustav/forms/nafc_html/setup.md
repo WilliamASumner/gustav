@@ -50,7 +50,6 @@ and the following output for `http://YOUR_SITE/ALIAS_NAME/test`:
 If the site returns an *Interal Server Error* or a 404, check the output in `/var/log/apache2/error.log`.  
 There are a couple common errors:
 ### Incorrect response value type
-*The output:*
 ```
 TypeError: sequence of byte string values expected, value of type str found
 ```
@@ -58,7 +57,6 @@ TypeError: sequence of byte string values expected, value of type str found
 This error is sneaky because a python 2.7 installation won't complain about a response function returning a string delimited by quotes (''/""), but python 3 will, because regular strings are no longer a byte string type. To fix this, use either a `b'YOUR\_STRING\_HERE'` in python 3 code, or just stick to `b"YOUR_STRING_HERE"` for interoperability. See `homepage_handler` and `test_handler` in `wsgi_test_script.py`.
 
 ### Missing WSGI application
-*The output:*
 ```
 Target WSGI script '/var/www/wsgi/wsgi_test_script.py' does not contain WSGI application 'application'
 ```
